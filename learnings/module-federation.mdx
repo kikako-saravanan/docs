@@ -1,0 +1,75 @@
+---
+title: "Module Federation"
+description: "Notes on sharing microfrontend code with Webpack"
+---
+
+## What it is
+
+Module Federation lets you share code between independently deployed builds at runtime. You expose modules from one app (a remote) and consume them in another app (a host).
+
+## Why it is useful
+
+- You can deploy features independently without rebuilding the host.
+- Teams can own their microfrontend code and release on their own schedule.
+- Shared dependencies reduce bundle duplication when configured correctly.
+
+## Core concepts
+
+- **Host**: the app that loads remote modules.
+- **Remote**: the app that exposes modules.
+- **Shared dependencies**: libraries like `react` that should be singletons.
+- **Exposes**: the modules a remote makes available.
+- **Remotes**: the modules a host consumes.
+
+## Typical setup
+
+1. Configure `ModuleFederationPlugin` in the remote to expose a module.
+2. Configure `ModuleFederationPlugin` in the host to reference the remote.
+3. Load the remote module in the host with dynamic import.
+
+```js
+// remote webpack.config.js
+new ModuleFederationPlugin({
+  name: 'catalog',
+  filename: 'remoteEntry.js',
+  exposes: {
+    './ProductCard': './src/ProductCard'
+  },
+  shared: {
+    react: { singleton: true, requiredVersion: '^18.0.0' },
+    'react-dom': { singleton: true, requiredVersion: '^18.0.0' }
+  }
+})
+```
+
+```js
+// host webpack.config.js
+new ModuleFederationPlugin({
+  name: 'storefront',
+  remotes: {
+    catalog: 'catalog@https://example.com/remoteEntry.js'
+  },
+  shared: {
+    react: { singleton: true, requiredVersion: '^18.0.0' },
+    'react-dom': { singleton: true, requiredVersion: '^18.0.0' }
+  }
+})
+```
+
+```js
+// host usage
+const ProductCard = React.lazy(() => import('catalog/ProductCard'));
+```
+
+## Gotchas
+
+- Align dependency versions for shared packages.
+- Avoid breaking changes in exposed modules without coordination.
+- Use runtime error boundaries when loading remote components.
+
+## Checklist for your notes
+
+- What was the host and remote in your setup?
+- Which dependencies did you mark as shared?
+- How did you handle version mismatches?
+- What was the deployment URL for `remoteEntry.js`?
