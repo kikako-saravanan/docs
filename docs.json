@@ -7,7 +7,10 @@
     "light": "#5EEAD4",
     "dark": "#0B1220"
   },
-  "favicon": "/favicon.svg",
+  "favicon": {
+    "light": "/favicon.svg",
+    "dark": "/favicon.svg"
+  },
   "navigation": {
     "tabs": [
       {
@@ -69,9 +72,14 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "website": "https://www.saravananm.dev/",
+      "linkedin": "https://www.linkedin.com/in/saravanan-m/",
+      "github": "https://github.com/kikako-saravanan",
+      "x": "https://mobile.twitter.com/kikako_saro",
+      "instagram": "https://www.instagram.com/saravanan309811"
     }
+  },
+  "seo": {
+    "indexing": "all"
   }
 }
