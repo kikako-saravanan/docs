@@ -1,0 +1,365 @@
+---
+title: "Advanced topics and troubleshooting"
+description: "Chapters 12–17 — Advanced."
+---
+
+**Chapter 12 — MF 2.0 Features**
+
+# Dynamic Type Hints
+
+One of MF 2.0's killer features. Auto-generate and auto-sync TypeScript types from remotes — no manual type sharing.
+
+## The Problem it Solves
+
+In MF 1.0, if Remote A exposes a `Button` component and Host B uses it, Host B has **no TypeScript types** for `Button` unless Remote A publishes an npm package or you manually copy types. With large teams this becomes a nightmare.
+
+## How it Works in MF 2.0
+
+1. **BUILD TIME (Remote)**: MF plugin runs `tsc` on exposed modules, bundles types into `@mf-types.zip`.
+2. **MANIFEST**: `mf-manifest.json` has `metaData.types.name` pointing to the zip file.
+3. **HOST DEV SERVER**: MF plugin fetches the zip, extracts to `@mf-types/` in host's root.
+4. **IDE**: Your editor now has full types for `import('product/Button')`.
+
+## Configuration
+
+```js
+new ModuleFederationPlugin({
+  name: 'product',
+  exposes: { './Button': './src/Button.tsx' },
+  shared: { react: { singleton: true } },
+  // dts: true is the default in @module-federation/enhanced
+  // Explicit config:
+  dts: {
+    generateTypes: true,        // generate @mf-types.zip
+    compileInChildProcess: true, // don't block the main build
+    tsConfigPath: './tsconfig.json',
+  },
+});
+```
+
+```js
+new ModuleFederationPlugin({
+  name: 'shell',
+  remotes: { product: 'product@http://localhost:3001/mf-manifest.json' },
+  dts: {
+    consumeTypes: true, // download & extract types on dev server start
+  },
+});
+```
+
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "product/*": ["./@mf-types/product/*"]
+    }
+  }
+}
+```
+
+## Result: Full IntelliSense for Remote Modules
+
+```tsx
+// ✅ TypeScript knows Button's props — autocomplete works!
+const Button = lazy(() => import('product/Button'));
+
+// Hover over Button → shows: (prop) label: string, onClick?: () => void, variant?: 'primary' | 'secondary'
+<Button label="Add to Cart" /> // ← full type checking!
+```
+
+**Chapter 13 — Advanced**
+
+# Build Plugins
+
+MF 2.0 works across every major bundler. Here's how to configure each one.
+
+## Supported Build Tools
+
+- **Webpack 5 (v2)**: `@module-federation/enhanced/webpack` — the original, most battle-tested
+- **Rspack (v2)**: `@module-federation/enhanced/rspack` — Rust-based, 5-10x faster builds, same API
+- **Rsbuild (new)**: `@module-federation/rsbuild-plugin` — Rspack-based, batteries included
+- **Vite (new)**: `@module-federation/vite` — Vite plugin, community supported
+
+## Webpack
+
+```js
+const { ModuleFederationPlugin } = require('@module-federation/enhanced/webpack');
+
+module.exports = {
+  output: {
+    publicPath: 'auto', // ← critical for MF! Lets chunks be loaded from correct host
+  },
+  plugins: [
+    new ModuleFederationPlugin({
+      name: 'product',
+      filename: 'remoteEntry.js',
+      exposes: { './Button': './src/Button.tsx' },
+      shared: { react: { singleton: true } },
+    }),
+  ],
+};
+```
+
+## Rspack (same API, faster builds)
+
+```js
+const { ModuleFederationPlugin } = require('@module-federation/enhanced/rspack');
+
+module.exports = {
+  output: { publicPath: 'auto' },
+  plugins: [
+    new ModuleFederationPlugin({
+      name: 'product',
+      exposes: { './Button': './src/Button.tsx' },
+      shared: { react: { singleton: true } },
+    }),
+  ],
+};
+```
+
+## Rsbuild (createModuleFederationConfig)
+
+```ts
+import { defineConfig } from '@rsbuild/core';
+import { pluginModuleFederation } from '@module-federation/rsbuild-plugin';
+
+export default defineConfig({
+  plugins: [
+    pluginModuleFederation({
+      name: 'shell',
+      remotes: {
+        product: 'product@http://localhost:3001/mf-manifest.json',
+      },
+      shared: { react: { singleton: true }, 'react-dom': { singleton: true } },
+    }),
+  ],
+});
+```
+
+<Warning>
+  **⚡ publicPath: 'auto' is Critical**
+  Always set `output.publicPath: 'auto'` in remote apps. Without it, the remote's chunks will be fetched from the host's URL, causing 404 errors.
+</Warning>
+
+**Chapter 14 — Advanced**
+
+# Performance
+
+MF introduces new performance challenges. Here's how to master them.
+
+## The Waterfall Problem
+
+Without preloading, MF has a sequential network request chain:
+
+```
+0ms   → GET /mf-manifest.json (shell's own)
+100ms → GET http://remote1:3001/mf-manifest.json
+200ms → GET http://remote1:3001/remoteEntry.js
+300ms → GET http://remote1:3001/src_Button_tsx.js
+400ms → 💥 React finally renders the remote component
+
+With preloadRemote() these happen in parallel:
+0ms   → GET manifest + GET remoteEntry + GET chunks  (all at once)
+100ms → 💥 React renders immediately
+```
+
+## Shared Tree Shaking
+
+MF 2.0 supports tree-shaking across shared modules. If the remote only uses 20% of a shared utility library, only those exports get bundled.
+
+```js
+shared: {
+  '@myorg/utils': {
+    singleton: true,
+    // requiredVersion + import path = tree shaking eligible
+    import: '@myorg/utils',
+    requiredVersion: '^1.0.0',
+  }
+}
+```
+
+## Chunk Optimization Checklist
+
+| What to Check | Why it Matters | How to Fix |
+| --- | --- | --- |
+| React loaded twice | 2x bundle size + hook errors | `singleton: true` on all apps |
+| Large shared libs (lodash, moment) | Bloated initial bundle | Use tree-shakeable alternatives or scope sharing |
+| No preloading on critical paths | Waterfall delay on navigation | `preloadRemote()` on route hover/prefetch |
+| No async boundary | "Shared module not available" error | Add `import('./bootstrap')` in index.js |
+| publicPath hardcoded | Breaks in different environments | Use `publicPath: 'auto'` |
+
+**Chapter 15 — Advanced**
+
+# Debug & Devtools
+
+MF 2.0 ships with a Chrome DevTool extension and built-in debug mode. No more guessing about shared scope.
+
+## Chrome DevTool
+
+Install the "Module Federation Devtools" extension from Chrome Web Store. Once installed, a new "Module Federation" tab appears in DevTools showing:
+
+- **Dependency Graph**: Visual tree of all loaded remotes and their relationships
+- **Shared Scope Inspector**: See every shared dep, its version, and whether it was reused or duplicated
+- **Hot Proxy**: Redirect online remote to your local dev server for hot updates
+- **Expose Explorer**: See all exposed modules from each remote and their chunk IDs
+
+## Enable Debug Mode
+
+```js
+new ModuleFederationPlugin({
+  name: 'shell',
+  // ...
+  dev: true, // enables debug logs in console
+});
+```
+
+```js
+// In browser devtools console:
+__FEDERATION__.__DEBUG__ = true; // enable verbose logs
+__FEDERATION__.__INSTANCES__;    // inspect all MF instances
+__FEDERATION__.__MANIFEST__;     // inspect loaded manifests
+```
+
+## Global Variables for Debugging
+
+| Variable | What you see |
+| --- | --- |
+| `__FEDERATION__.__INSTANCES__` | Array of all active MF instances with their config |
+| `__FEDERATION__.__MANIFEST__` | Parsed manifest files for all loaded remotes |
+| `__webpack_require__.S` | The raw shared scope object with all registered versions |
+| `__webpack_require__.m` | Module registry — check if a module is already loaded |
+
+**Chapter 16 — Advanced**
+
+# Patterns & Recipes
+
+Real-world patterns used in production MF systems — including patterns relevant to your work at Lowe's Helix.
+
+## Pattern 1: Shell + Feature Micro-frontends
+
+The classic. One shell handles routing, all features are independent remotes.
+
+```tsx
+import { lazy, Suspense } from 'react';
+import { Routes, Route } from 'react-router-dom';
+
+const Products = lazy(() => import('product/routes'));
+const Checkout = lazy(() => import('checkout/routes'));
+const Dashboard = lazy(() => import('dashboard/routes'));
+
+export default function AppRouter() {
+  return (
+    <Suspense fallback={<GlobalSpinner />}>
+      <Routes>
+        <Route path="/products/*" element={<Products />} />
+        <Route path="/checkout/*" element={<Checkout />} />
+        <Route path="/dashboard/*" element={<Dashboard />} />
+      </Routes>
+    </Suspense>
+  );
+}
+```
+
+## Pattern 2: Design System as Remote
+
+Expose your component library as a remote. All teams consume live — no npm publish, instant updates.
+
+```js
+new ModuleFederationPlugin({
+  name: 'designSystem',
+  exposes: {
+    './Button': './src/Button.tsx',
+    './Modal': './src/Modal.tsx',
+    './Table': './src/Table.tsx',
+    './tokens': './src/tokens/index.ts',
+    '.': './src/index.ts', // barrel export
+  },
+  shared: {
+    react: { singleton: true, requiredVersion: '^18.0.0' },
+    'react-dom': { singleton: true },
+  },
+});
+```
+
+## Pattern 3: Cross-MFE Communication
+
+Micro-frontends should NOT directly call each other. Use a shared event bus or shared store exposed from a common remote.
+
+```ts
+// Exposed from a 'sharedState' remote
+type Handler = (data: unknown) => void;
+const listeners = new Map<string, Set<Handler>>();
+
+export const emit = (event: string, data: unknown) => {
+  listeners.get(event)?.forEach(h => h(data));
+};
+
+export const on = (event: string, handler: Handler) => {
+  if (!listeners.has(event)) listeners.set(event, new Set());
+  listeners.get(event)!.add(handler);
+  return () => listeners.get(event)!.delete(handler); // unsubscribe
+};
+```
+
+## Pattern 4: Canary Releases
+
+Deploy two versions of a remote, route a % of users to the new version — without touching the host.
+
+```ts
+import { init, registerRemotes } from '@module-federation/enhanced/runtime';
+
+const isCanaryUser = Math.random() < 0.1; // 10% canary
+
+init({ name: 'shell', remotes: [] });
+
+registerRemotes([{
+  name: 'product',
+  entry: isCanaryUser
+    ? 'http://cdn.myco.com/product/v2/mf-manifest.json'
+    : 'http://cdn.myco.com/product/v1/mf-manifest.json',
+}]);
+```
+
+**Chapter 17 — Final**
+
+# Troubleshooting
+
+Every error you'll encounter in production, and exactly how to fix it.
+
+## Runtime Errors
+
+| Error | Root Cause | Fix |
+| --- | --- | --- |
+| `Shared module is not available for eager consumption` | Synchronous import before async negotiation | Add `import('./bootstrap')` in index.js |
+| `Invalid hook call` | Two copies of React loaded | `react: { singleton: true }` on all apps |
+| `Cannot find module 'remoteName/expose'` | Remote not declared in `remotes` | Add to `remotes` config and rebuild |
+| `404 on remoteEntry.js` | Wrong URL, remote not running, wrong publicPath | Verify URL, check remote dev server, set `publicPath: 'auto'` |
+| Stale module after hot reload | Module cache not invalidated | Add `output.uniqueName` in remote config |
+| CORS error on manifest fetch | Remote server doesn't allow cross-origin | Add CORS headers to remote dev server / CDN |
+
+## Build Errors
+
+| Error | Root Cause | Fix |
+| --- | --- | --- |
+| Circular dependency | App A remotes App B, B remotes A | MF supports circular deps — ensure init order is correct |
+| Type errors on remote imports | Types not downloaded or tsconfig paths missing | Enable `dts.consumeTypes: true`, add tsconfig paths |
+| Build succeeds but chunks 404 | `publicPath` is wrong | Set `output.publicPath: 'auto'` in remote |
+
+## Final Quiz
+
+**Question:** 🧠 You see "Invalid hook call" — React hooks can only be called inside React components. You're inside a component. What's the MF root cause?
+
+- The remote component is using class components instead of hooks
+- **Two separate copies of React are loaded — host has one, remote has another**
+- The Suspense boundary is missing
+
+**Explanation:** When React is loaded twice, each copy has its own internal state. Hooks are validated against the React instance that originally mounted the component. If the host's React renders the shell and the remote's React renders the component, they don't match — causing the cryptic "Invalid hook call" error.
+
+<Note>
+  **🎉 You've completed the Module Federation Masterclass!** You now understand every concept from the official guide: Host/Remote, exposes/remotes/shared, Manifest, Federation Runtime, Runtime API, Runtime Hooks, Plugin System, Dynamic Types, Build Plugins, Performance, Debugging, and Production Patterns. You're ready to architect and build production-grade MF systems.
+</Note>
+
+## Next
+
+- [← Federation runtime and API](/learnings/module-federation-runtime)
+- [Back to start ↩](/learnings/module-federation-overview)

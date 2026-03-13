@@ -16,8 +16,24 @@
           {
             "group": "Learnings",
             "pages": [
-              "learnings/index",
-              "learnings/module-federation"
+              "learnings/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Module Federation Guide",
+        "groups": [
+          {
+            "group": "Guide",
+            "pages": [
+              "learnings/module-federation",
+              "learnings/module-federation-overview",
+              "learnings/module-federation-mental-model",
+              "learnings/module-federation-mf2",
+              "learnings/module-federation-core-concepts",
+              "learnings/module-federation-runtime",
+              "learnings/module-federation-advanced"
             ]
           }
         ]

@@ -1,0 +1,87 @@
+---
+title: "MF 2.0 vs 1.0"
+description: "Chapter 03 — Foundation."
+---
+
+**Chapter 03 — Foundation**
+
+# MF 2.0 vs 1.0
+
+MF 2.0 isn't just an upgrade — it's a redesign. Here's what's new and why it matters.
+
+## MF 1.0 (Webpack 5 built-in)
+
+- Module export, load, dependency sharing
+- remoteEntry.js as entry point
+- Webpack-only
+- No TypeScript type sharing
+- No debug tooling
+- Runtime tightly coupled to build tool
+- No manifest protocol
+
+## MF 2.0 (@module-federation/enhanced)
+
+- Everything in 1.0 PLUS…
+- **mf-manifest.json** — deployment-friendly manifest
+- **Federation Runtime** — standalone, build-tool agnostic
+- **Runtime Plugin System** — extend any lifecycle
+- **Dynamic TypeScript types** — auto-generated & synced
+- **Chrome DevTool** — visualize dependencies
+- **Rspack support** — Rust-speed builds
+- **Preloading** — solve the waterfall problem
+
+## Installing MF 2.0
+
+```bash
+# For Webpack projects
+npm install @module-federation/enhanced
+
+# For Rspack projects
+npm install @module-federation/enhanced @rspack/core
+
+# Scaffold a new project from scratch
+npx create-module-federation@latest
+# Select: framework → role (provider/consumer) → name
+```
+
+## Quick Wiring: Webpack
+
+```js
+const { ModuleFederationPlugin } = require('@module-federation/enhanced/webpack');
+
+module.exports = {
+  plugins: [
+    new ModuleFederationPlugin({
+      name: 'product',
+      exposes: { './Button': './src/Button.tsx' },
+      shared: { react: { singleton: true }, 'react-dom': { singleton: true } },
+    }),
+  ],
+};
+```
+
+```js
+const { ModuleFederationPlugin } = require('@module-federation/enhanced/webpack');
+
+module.exports = {
+  plugins: [
+    new ModuleFederationPlugin({
+      name: 'shell',
+      remotes: {
+        // MF 2.0: point to mf-manifest.json, not remoteEntry.js
+        product: 'product@http://localhost:3001/mf-manifest.json',
+      },
+      shared: { react: { singleton: true }, 'react-dom': { singleton: true } },
+    }),
+  ],
+};
+```
+
+<Note>
+  **🆕 MF 2.0 Key Change**: In MF 1.0 you pointed remotes at `remoteEntry.js`. In MF 2.0 you point at `mf-manifest.json`. The manifest contains more metadata enabling type hints, preloading, and versioned deployment.
+</Note>
+
+## Next
+
+- [← Mental model and bootstrap](/learnings/module-federation-mental-model)
+- [Next: Core concepts →](/learnings/module-federation-core-concepts)
