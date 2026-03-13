@@ -1,0 +1,71 @@
+---
+title: "Mental model and bootstrap"
+description: "Chapter 02 — Foundation."
+---
+
+**Chapter 02 — Foundation**
+
+# The Mental Model
+
+Before touching any config, you need the right mental model. Get this right and everything else clicks.
+
+## Think in Containers
+
+Every Module Federation app creates a **container**. A container exposes a `get()` and `init()` API. That's really all Module Federation is — a standardized way for containers to discover, initialize, and call each other.
+
+```ts
+// Every remoteEntry.js or mf-manifest.json exposes:
+interface Container {
+  // Initialize this container with shared scope
+  init(shareScope: SharedScope): Promise<void>;
+
+  // Load an exposed module from this container
+  get(module: string): Promise<() => any>;
+}
+```
+
+## The 4 Roles
+
+- **ROLE 01 — Host**: The app loaded first. Initializes the shared scope. Consumes remote modules.
+- **ROLE 02 — Remote**: An app that exposes modules. Must be running independently. Has its own build.
+- **ROLE 03 — Bidirectional**: Can act as both host AND remote. Can consume while being consumed.
+- **ROLE 04 — Shared Scope**: The global negotiation layer for dependencies. Prevents duplicate React instances.
+
+## What Happens at Runtime — Step by Step
+
+1. **STEP 1 — Host boots**: Webpack calls `__webpack_require__.I`, registering all shared deps.
+2. **STEP 2 — Manifest fetched**: Browser fetches `mf-manifest.json` (or `remoteEntry.js`) from remote URL.
+3. **STEP 3 — init() called**: Host passes its `shareScope` to the remote container so both sync shared deps.
+4. **STEP 4 — get() called**: The specific exposed module's factory is returned, then evaluated.
+
+## The Critical "Bootstrap" Insight
+
+Module Federation requires that the host and remote negotiate shared deps *asynchronously* before any module can run. This is why you'll always see an `index.js` that just does `import('./bootstrap')`.
+
+```js
+// ✅ CORRECT — async boundary lets MF negotiate shared deps first
+import('./bootstrap');
+
+// ❌ WRONG — synchronous import will cause "Shared module not available for eager consumption"
+import React from 'react';
+ReactDOM.render(...);
+```
+
+<Warning>
+  **⚡ The Most Common Gotcha**: **Uncaught Error: Shared module is not available for eager consumption** — This is caused by synchronously importing shared modules before the async negotiation completes. Always use the bootstrap pattern or set `eager: true` on the shared dep.
+</Warning>
+
+## Quick Check
+
+**Question:** 🧠 Why do we put our app code behind `import('./bootstrap')`?
+
+- To make the app load faster
+- **To create an async boundary so MF can negotiate shared deps before any code runs**
+- It's just a Webpack convention with no technical reason
+
+**Explanation:** The async import creates a "chunk loading boundary" — Webpack must negotiate shared deps across all containers before any module runs. Without it, the bootstrap is synchronous and React would try to load before MF can check if a shared version already exists.
+
+## Next
+
+- [← Introduction](/learnings/module-federation-overview)
+- [Next: MF 2.0 vs 1.0 →](/learnings/module-federation-mf2)

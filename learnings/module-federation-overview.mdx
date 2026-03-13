@@ -1,0 +1,45 @@
+---
+title: "Module Federation overview"
+description: "Chapter 01 — Foundation."
+---
+
+**Chapter 01 — Foundation**
+
+# Module Federation<br />Masterclass
+
+The definitive guide to MF 2.0 — from concepts to production patterns for Frontend Framework Engineers.
+
+<Note>
+  **📌 What you'll learn**: Every concept from the official guide: Host/Remote, exposes/remotes/shared, Manifest, Federation Runtime, Runtime API, Runtime Hooks, dynamic type hints, build plugins, performance, debugging, and advanced patterns.
+</Note>
+
+## What is Module Federation?
+
+Module Federation lets multiple independently deployed JavaScript applications share code *at runtime*, without npm publish, without build-time coupling. Think of it as **microservices for the frontend**.
+
+```
+THE BIG PICTURE
+SHELL APP — Host / Consumer :3000
+↕ loads at runtime
+PRODUCT APP — Remote :3001
+CART APP — Remote :3002
+DESIGN SYSTEM — Remote :3003
+SHARED: react, react-dom — Loaded once, shared across all
+```
+
+## Why it matters — The Old World vs New World
+
+| Old World (npm + monorepo) | Module Federation |
+| --- | --- |
+| Release requires re-deploying everything | Deploy each app independently |
+| Shared components via npm publish cycle | Live component sharing at runtime |
+| Bundle grows as teams add features | Each micro-frontend bundles only its code |
+| One team can break all other builds | Teams are fully decoupled at build time |
+| Onboarding = clone massive monorepo | Onboarding = just the micro-frontend |
+
+## History Timeline
+
+- **2018 — Webpack 4.20**: Module hooks introduced — laid the conceptual groundwork.
+- **2019 — Webpack 5 / MF 1.0**: Official Module Federation feature shipped. The `ModuleFederationPlugin` becomes available.
+- **2023 — MF 2.0**: Runtime decoupled from build tools. Manifest protocol, dynamic TypeScript types, Chrome DevTool, Runtime plugin system, Rspack support.
+- **Now — MF 2.0+**: SSR support, preloading, data prefetch, Vite/Metro/Rsbuild adapters, Zephyr Cloud deployment.

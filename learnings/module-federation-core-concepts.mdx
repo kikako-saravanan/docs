@@ -1,0 +1,301 @@
+---
+title: "Core concepts"
+description: "Chapters 04–07 — Core Concepts."
+---
+
+**Chapter 04 — Core Concepts**
+
+# Host & Remote
+
+These are the two fundamental roles in any MF architecture. Every app is one or both.
+
+## Host (Consumer)
+
+The host is the app that **consumes** remote modules. It initializes the shared scope (the global pool of shared dependencies) and requests modules from remotes at runtime. The host boots first — its `remoteEntry` or `mf-manifest.json` is loaded and `init()` is called to register shared deps.
+
+## Remote (Provider)
+
+The remote is the app that **provides** modules. It runs as its own web server, has its own build, and exposes specific modules via the `exposes` config. It does NOT need to know about the host at all — complete decoupling.
+
+## Bidirectional: Host + Remote at Once
+
+A single app can be both. This is the most common real-world setup in large systems:
+
+```js
+new ModuleFederationPlugin({
+  name: 'appB',
+  // Acting as REMOTE — exposing to others
+  exposes: {
+    './Checkout': './src/Checkout.tsx',
+  },
+  // Acting as HOST — consuming from others
+  remotes: {
+    designSystem: 'ds@http://localhost:3003/mf-manifest.json',
+  },
+  shared: { react: { singleton: true } },
+});
+```
+
+## Full Real-World Example: E-Commerce Shell
+
+```tsx
+import React, { Suspense, lazy } from 'react';
+
+// Dynamic import from 'product' remote → MF loads it lazily
+const ProductList = lazy(() => import('product/ProductList'));
+const Cart = lazy(() => import('cart/Cart'));
+const Header = lazy(() => import('designSystem/Header'));
+
+export default function App() {
+  return (
+    <Suspense fallback="Loading…">
+      <Header title="My Store" />
+      <ProductList category="electronics" />
+      <Cart />
+    </Suspense>
+  );
+}
+```
+
+<Tip>
+  **💡 Pro Pattern: Error Boundary + Suspense**
+  Always wrap remote imports in both `Suspense` and an error boundary. If the remote is down, you want a graceful fallback, not a crashed host app.
+</Tip>
+
+**Chapter 05 — Core Concepts**
+
+# exposes
+
+The config that turns your app into a provider. You declare exactly what you want to share with the world.
+
+## Basic Syntax
+
+```js
+exposes: {
+  // alias (what consumers will import) : actual file path
+  './Button': './src/components/Button.tsx',
+  './Modal': './src/components/Modal.tsx',
+  './useAuth': './src/hooks/useAuth.ts',
+  './utils/format': './src/utils/format.ts',
+  '.': './src/index.ts', // expose root
+}
+```
+
+## What Can You Expose?
+
+Anything Webpack can bundle: React components, Vue components, utility functions, hooks, stores, full pages, even CSS modules. The exposed module becomes its own async chunk in the remote's build.
+
+**src/components/Button.tsx (the exposed module)**
+
+```tsx
+// This file lives in the REMOTE app (product/:3001)
+import React from 'react';
+
+interface Props {
+  label: string;
+  onClick?: () => void;
+  variant?: 'primary' | 'secondary';
+}
+
+export default function Button({ label, onClick, variant = 'primary' }: Props) {
+  return <button className={`btn btn-${variant}`} onClick={onClick}>{label}</button>;
+}
+```
+
+**shell/src/SomePage.tsx (the consumer)**
+
+```tsx
+// HOST app consuming the exposed Button
+import React, { lazy, Suspense } from 'react';
+
+// "product" is the remote name, "/Button" is the expose alias
+const Button = lazy(() => import('product/Button'));
+
+export default function Page() {
+  return (
+    <Suspense fallback="…">
+      <Button label="Add to Cart" onClick={() => console.log('clicked')} />
+    </Suspense>
+  );
+}
+```
+
+## How exposes works under the hood
+
+When you add an entry to `exposes`, Webpack's `ContainerPlugin` creates a new compilation entry for that module. It gets bundled into its own async chunk. The `remoteEntry.js` (or manifest) acts as the directory — it knows the chunk IDs of every exposed module and will load only the right chunk when the host calls `container.get('./Button')`.
+
+```js
+// remoteEntry.js (auto-generated, simplified)
+// Webpack auto-generates this. You never write it manually.
+var product;
+product = {
+  get(module) {
+    ensureChunk('src_components_Button'); // lazy loads the chunk
+    return __webpack_require__('./src/components/Button.tsx');
+  },
+  init(shareScope) {
+    // Syncs shared deps (react, etc.) with host
+    __webpack_require__.S['default'] = shareScope;
+  }
+};
+```
+
+**Chapter 06 — Core Concepts**
+
+# remotes
+
+How the host declares which external apps it wants to consume modules from.
+
+## Syntax
+
+```js
+remotes: {
+  // localAlias: 'remoteName@URL_to_manifest_or_remoteEntry'
+
+  // MF 2.0 style — points to mf-manifest.json
+  product: 'product@http://localhost:3001/mf-manifest.json',
+
+  // MF 1.0 style — still works in 2.0
+  cart: 'cart@http://localhost:3002/remoteEntry.js',
+
+  // Use localAlias that differs from remoteName
+  ds: 'designSystem@http://localhost:3003/mf-manifest.json',
+}
+```
+
+## Dynamic Remotes at Runtime
+
+Sometimes you don't know the URL at build time (e.g., it depends on env, feature flags, or A/B tests). Use the Runtime API to register remotes dynamically:
+
+```ts
+import { registerRemotes } from '@module-federation/enhanced/runtime';
+
+// Fetch config from your feature-flag service or API
+const config = await fetch('/api/mf-config').then(r => r.json());
+
+registerRemotes([
+  { name: 'product', entry: config.productUrl },
+  { name: 'cart', entry: config.cartUrl },
+]);
+
+// Now you can use import('product/ProductList') as normal
+```
+
+## Promise-based Remotes (MF 1.0 pattern)
+
+```js
+remotes: {
+  // Promise-based: lets you async-resolve the URL before webpack uses it
+  product: `promise new Promise(resolve => {
+    const url = window.mfConfig?.productUrl || 'http://localhost:3001/remoteEntry.js';
+    const script = document.createElement('script');
+    script.src = url;
+    script.onload = () => {
+      resolve({
+        get: (request) => window.product.get(request),
+        init: (scope) => {
+          try { window.product.init(scope); } catch (e) {}
+        }
+      });
+    };
+    document.head.appendChild(script);
+  })`,
+}
+```
+
+<Note>
+  **💡 MF 2.0 Preferred Approach**: Instead of the verbose Promise syntax above, in MF 2.0 just use `registerRemotes()` from the Runtime API. It's cleaner and supports the Manifest protocol.
+</Note>
+
+**Chapter 07 — Core Concepts**
+
+# shared
+
+The most powerful and most misunderstood config. Get this wrong and you'll have multiple Reacts fighting each other.
+
+## What is shared?
+
+When host and remote both depend on React, without `shared` you'd download React twice. With `shared`, they negotiate at runtime: "I have React 18.2 — do you want to use mine?" If versions are compatible, only one copy runs.
+
+```
+SHARED SCOPE NEGOTIATION
+HOST: react@18.2.0 / react-dom@18.2.0
+→ shareScope → SHARED SCOPE: { react: { "18.2.0": factory } }
+← syncs ← REMOTE: react@18.2.0 (already loaded? skip!)
+```
+
+## All shared Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `singleton` | boolean | Only one instance ever. If versions conflict, warn but use the highest loaded version. Essential for React, React-DOM, stores. |
+| `requiredVersion` | string (semver) | Example: `"^18.0.0"`. Specifies what version range is acceptable. If mismatch, MF will warn and may fallback to bundling its own. |
+| `eager` | boolean | Don't put in async chunk. Include synchronously in initial bundle. Use when you must have a dep available before the async boundary. |
+| `strictVersion` | boolean | Throw an error (not just a warning) if the version doesn't match. Safer but less flexible. |
+| `shareScope` | string | Default is `"default"`. You can create isolated scopes to avoid cross-contamination between unrelated MF groups. |
+| `version` | string | Override the version reported. Useful in monorepos where package.json version isn't the truth. |
+
+## Comprehensive shared Config Example
+
+```js
+shared: {
+  // Bare minimum — just declare it
+  lodash: 'lodash',
+
+  // With options
+  react: {
+    singleton: true,
+    requiredVersion: '^18.0.0',
+    // eager: true  ← use only in root host to avoid "Shared module not available" error
+  },
+  'react-dom': {
+    singleton: true,
+    requiredVersion: '^18.0.0',
+  },
+
+  // Your own shared library
+  '@myorg/design-tokens': {
+    singleton: true,
+    requiredVersion: '>=1.0.0',
+  },
+
+  // State management — must be singleton or stores break
+  '@reduxjs/toolkit': {
+    singleton: true,
+    requiredVersion: '^2.0.0',
+  },
+  'react-redux': {
+    singleton: true,
+    requiredVersion: '^9.0.0',
+  },
+}
+```
+
+## The Version Conflict Matrix
+
+| Scenario | singleton | strictVersion | Result |
+| --- | --- | --- | --- |
+| Host: React 18 / Remote: React 18 | true | false | ✅ Shared perfectly |
+| Host: React 18 / Remote: React 17 | true | false | ⚠️ Warning, uses React 18 |
+| Host: React 18 / Remote: React 17 | true | true | ❌ Error thrown |
+| Host: React 18 / Remote: React 17 | false | false | ⚠️ Both loaded (2 Reacts!) |
+| No shared configured at all | — | — | ❌ Both bundled, 2 Reacts |
+
+<Warning>
+  **⚡ The Two-React Problem**: If React is loaded twice, you'll see "Invalid hook call" or "React is not defined" — cryptic errors that are hard to debug. The fix: ensure both host and remote declare `react: { singleton: true }` and have compatible versions.
+</Warning>
+
+## Quick Check
+
+**Question:** 🧠 If Host has React 18 and Remote has React 17 with `singleton: true, strictVersion: false`, what happens?
+
+- React 17 is used by both (lower version wins)
+- **React 18 is used by both with a warning (highest loaded version wins)**
+- Both load their own React independently
+
+**Explanation:** With `singleton: true`, MF enforces one instance. If multiple versions are detected, the highest already-loaded version wins and a console warning is emitted. The remote's React 17 is silently upgraded to React 18 from the host's shared scope.
+
+## Next
+
+- [← MF 2.0 vs 1.0](/learnings/module-federation-mf2)
+- [Next: Federation runtime and API →](/learnings/module-federation-runtime)

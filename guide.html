@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module Federation Masterclass</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c12;
+    --surface: #111320;
+    --surface2: #181c2e;
+    --border: #1f2540;
+    --accent: #5865f9;
+    --accent2: #38e2a0;
+    --accent3: #f97316;
+    --accent4: #e879f9;
+    --text: #e8eaf6;
+    --text-dim: #7c82a8;
+    --code-bg: #0d1117;
+    --host-color: #5865f9;
+    --remote-color: #38e2a0;
+    --shared-color: #f97316;
+    --exposes-color: #e879f9;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  .layout { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 24px 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .sidebar-logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .sidebar-logo .brand {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .sidebar-logo .sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .nav-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 8px 20px 4px;
+    margin-top: 8px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 20px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-dim);
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    text-decoration: none;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(88,101,249,.06); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(88,101,249,.1); }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  /* ── MAIN ── */
+  .main { flex: 1; max-width: 900px; padding: 60px 64px; overflow-y: auto; }
+
+  /* ── SECTION ── */
+  .section { display: none; }
+  .section.active { display: block; animation: fadeUp 0.3s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── TYPOGRAPHY ── */
+  .chapter-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--text) 0%, var(--text-dim) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 40px 0 12px;
+    color: var(--text);
+  }
+  h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    margin: 28px 0 8px;
+    color: var(--accent2);
+  }
+  p { margin-bottom: 14px; color: var(--text); }
+  .lead { font-size: 17px; color: var(--text-dim); margin-bottom: 28px; font-weight: 300; }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 20px 0;
+    border-left: 3px solid;
+    font-size: 14px;
+  }
+  .callout.info { background: rgba(88,101,249,.1); border-color: var(--accent); }
+  .callout.success { background: rgba(56,226,160,.08); border-color: var(--accent2); }
+  .callout.warning { background: rgba(249,115,22,.08); border-color: var(--accent3); }
+  .callout.tip { background: rgba(232,121,249,.08); border-color: var(--accent4); }
+  .callout-title { font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
+  .callout.info .callout-title { color: var(--accent); }
+  .callout.success .callout-title { color: var(--accent2); }
+  .callout.warning .callout-title { color: var(--accent3); }
+  .callout.tip .callout-title { color: var(--accent4); }
+
+  /* ── CODE ── */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 16px 0;
+    overflow: hidden;
+  }
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .code-lang {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+  .code-file {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent2);
+  }
+  pre {
+    padding: 18px 18px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #c9d1d9;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  /* ── SYNTAX HIGHLIGHTING ── */
+  .kw { color: #ff7b72; }
+  .str { color: #a5d6ff; }
+  .cmt { color: #8b949e; font-style: italic; }
+  .fn { color: #d2a8ff; }
+  .prop { color: #79c0ff; }
+  .num { color: #f2cc60; }
+  .tag { color: #7ee787; }
+  .hl { background: rgba(88,101,249,.2); display: block; margin: 0 -18px; padding: 0 18px; }
+
+  /* ── DIAGRAM ── */
+  .diagram {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin: 20px 0;
+    overflow-x: auto;
+  }
+  .diagram svg { display: block; margin: 0 auto; }
+
+  /* ── COMPARISON TABLE ── */
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+  th {
+    background: var(--surface2);
+    padding: 10px 14px;
+    text-align: left;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: .04em;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  /* ── PILL BADGES ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: .03em;
+  }
+  .badge.host { background: rgba(88,101,249,.2); color: var(--host-color); }
+  .badge.remote { background: rgba(56,226,160,.15); color: var(--remote-color); }
+  .badge.shared { background: rgba(249,115,22,.15); color: var(--shared-color); }
+  .badge.exposes { background: rgba(232,121,249,.15); color: var(--exposes-color); }
+  .badge.new { background: rgba(56,226,160,.15); color: var(--accent2); }
+  .badge.v2 { background: rgba(88,101,249,.15); color: var(--accent); }
+
+  /* ── FLOW CARDS ── */
+  .flow-row {
+    display: flex;
+    gap: 12px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .flow-card {
+    flex: 1;
+    min-width: 160px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    position: relative;
+    transition: border-color .2s;
+  }
+  .flow-card:hover { border-color: var(--accent); }
+  .flow-card .fc-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .flow-card .fc-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .flow-card .fc-desc { font-size: 12px; color: var(--text-dim); }
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--text-dim);
+    font-size: 18px;
+    padding-top: 20px;
+  }
+
+  /* ── PROPERTY CARDS ── */
+  .prop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .prop-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    transition: border-color .2s;
+  }
+  .prop-card:hover { border-color: var(--accent2); }
+  .prop-card .pc-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .prop-card .pc-type { font-size: 11px; color: var(--accent3); margin-bottom: 6px; }
+  .prop-card .pc-desc { font-size: 12px; color: var(--text-dim); }
+
+  /* ── QUIZ ── */
+  .quiz {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 24px 0;
+  }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; }
+  .quiz-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all .15s;
+    font-family: 'Outfit', sans-serif;
+  }
+  .quiz-option:hover { border-color: var(--accent); background: rgba(88,101,249,.08); }
+  .quiz-option.correct { border-color: var(--accent2); background: rgba(56,226,160,.1); color: var(--accent2); }
+  .quiz-option.wrong { border-color: #ef4444; background: rgba(239,68,68,.08); color: #ef4444; }
+  .quiz-result { margin-top: 10px; font-size: 13px; font-weight: 500; display: none; }
+  .quiz-result.show { display: block; }
+  .quiz-result.good { color: var(--accent2); }
+  .quiz-result.bad { color: #ef4444; }
+
+  /* ── NAV BUTTONS ── */
+  .section-nav {
+    display: flex;
+    gap: 12px;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all .15s;
+  }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(88,101,249,.08); }
+  .nav-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .nav-btn.primary:hover { background: #4752d4; }
+  .nav-btn-spacer { flex: 1; }
+
+  /* ── INTERACTIVE DIAGRAM ── */
+  .arch-diagram {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin: 20px 0;
+    text-align: center;
+  }
+  .arch-row { display: flex; justify-content: center; gap: 16px; margin: 12px 0; flex-wrap: wrap; }
+  .arch-box {
+    border-radius: 8px;
+    padding: 14px 20px;
+    min-width: 140px;
+    position: relative;
+    cursor: default;
+  }
+  .arch-box.host-box { background: rgba(88,101,249,.15); border: 1px solid rgba(88,101,249,.4); }
+  .arch-box.remote-box { background: rgba(56,226,160,.1); border: 1px solid rgba(56,226,160,.35); }
+  .arch-box.shared-box { background: rgba(249,115,22,.1); border: 1px solid rgba(249,115,22,.3); }
+  .arch-box-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .arch-box.host-box .arch-box-title { color: var(--host-color); }
+  .arch-box.remote-box .arch-box-title { color: var(--remote-color); }
+  .arch-box.shared-box .arch-box-title { color: var(--shared-color); }
+  .arch-box-sub { font-size: 11px; color: var(--text-dim); }
+  .arch-arrow { font-size: 22px; color: var(--text-dim); display: flex; align-items: center; }
+  .arch-divider { width: 100%; height: 1px; background: var(--border); margin: 16px 0; }
+
+  /* ── FEATURE HIGHLIGHT ── */
+  .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .feature-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .feature-card .icon { font-size: 22px; margin-bottom: 8px; }
+  .feature-card .fc-t { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .feature-card .fc-d { font-size: 12px; color: var(--text-dim); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── PROGRESS ── */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .3s;
+    z-index: 100;
+  }
+
+  /* ── TIMELINE ── */
+  .timeline { margin: 20px 0; }
+  .tl-item { display: flex; gap: 16px; margin-bottom: 20px; }
+  .tl-left { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 5px; }
+  .tl-line { width: 1px; flex: 1; background: var(--border); margin-top: 4px; }
+  .tl-right { padding-bottom: 8px; }
+  .tl-year { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+  .tl-text { font-size: 13px; color: var(--text-dim); }
+
+  /* ── version compare ── */
+  .version-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .vc-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .vc-header {
+    padding: 12px 16px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .vc-v1 .vc-header { background: rgba(88,101,249,.15); color: var(--accent); }
+  .vc-v2 .vc-header { background: rgba(56,226,160,.1); color: var(--accent2); }
+  .vc-body { padding: 12px 16px; }
+  .vc-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  .vc-item::before { content: "✓"; color: var(--accent2); font-weight: 700; flex-shrink: 0; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { padding: 24px; }
+    .prop-grid, .feature-grid, .version-compare { grid-template-columns: 1fr; }
+    h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar" style="width:5%"></div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand">MF Masterclass</div>
+      <div class="sub">Module Federation 2.0</div>
+    </div>
+
+    <div class="nav-section-title">Foundation</div>
+    <a class="nav-item active" data-section="intro" onclick="goto('intro', this)">
+      <span class="nav-dot"></span> Introduction
+    </a>
+    <a class="nav-item" data-section="mental-model" onclick="goto('mental-model', this)">
+      <span class="nav-dot"></span> Mental Model
+    </a>
+    <a class="nav-item" data-section="v2" onclick="goto('v2', this)">
+      <span class="nav-dot"></span> MF 2.0 vs 1.0
+    </a>
+
+    <div class="nav-section-title">Core Concepts</div>
+    <a class="nav-item" data-section="host-remote" onclick="goto('host-remote', this)">
+      <span class="nav-dot"></span> Host & Remote
+    </a>
+    <a class="nav-item" data-section="exposes" onclick="goto('exposes', this)">
+      <span class="nav-dot"></span> exposes
+    </a>
+    <a class="nav-item" data-section="remotes-cfg" onclick="goto('remotes-cfg', this)">
+      <span class="nav-dot"></span> remotes
+    </a>
+    <a class="nav-item" data-section="shared" onclick="goto('shared', this)">
+      <span class="nav-dot"></span> shared
+    </a>
+
+    <div class="nav-section-title">MF 2.0 Features</div>
+    <a class="nav-item" data-section="manifest" onclick="goto('manifest', this)">
+      <span class="nav-dot"></span> Manifest
+    </a>
+    <a class="nav-item" data-section="runtime" onclick="goto('runtime', this)">
+      <span class="nav-dot"></span> Federation Runtime
+    </a>
+    <a class="nav-item" data-section="runtime-api" onclick="goto('runtime-api', this)">
+      <span class="nav-dot"></span> Runtime API
+    </a>
+    <a class="nav-item" data-section="runtime-hooks" onclick="goto('runtime-hooks', this)">
+      <span class="nav-dot"></span> Runtime Hooks & Plugins
+    </a>
+    <a class="nav-item" data-section="types" onclick="goto('types', this)">
+      <span class="nav-dot"></span> Dynamic Type Hints
+    </a>
+
+    <div class="nav-section-title">Advanced</div>
+    <a class="nav-item" data-section="build-plugins" onclick="goto('build-plugins', this)">
+      <span class="nav-dot"></span> Build Plugins
+    </a>
+    <a class="nav-item" data-section="performance" onclick="goto('performance', this)">
+      <span class="nav-dot"></span> Performance
+    </a>
+    <a class="nav-item" data-section="debug" onclick="goto('debug', this)">
+      <span class="nav-dot"></span> Debug & Devtools
+    </a>
+    <a class="nav-item" data-section="patterns" onclick="goto('patterns', this)">
+      <span class="nav-dot"></span> Patterns & Recipes
+    </a>
+    <a class="nav-item" data-section="troubleshooting" onclick="goto('troubleshooting', this)">
+      <span class="nav-dot"></span> Troubleshooting
+    </a>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ══════════════════════════════════════════
+         1. INTRODUCTION
+    ══════════════════════════════════════════ -->
+    <section class="section active" id="intro">
+      <div class="chapter-tag">Chapter 01 — Foundation</div>
+      <h1>Module Federation<br>Masterclass</h1>
+      <p class="lead">The definitive guide to MF 2.0 — from concepts to production patterns for Frontend Framework Engineers.</p>
+
+      <div class="callout info">
+        <div class="callout-title">📌 What you'll learn</div>
+        Every concept from the official guide: Host/Remote, exposes/remotes/shared, Manifest, Federation Runtime, Runtime API, Runtime Hooks, dynamic type hints, build plugins, performance, debugging, and advanced patterns.
+      </div>
+
+      <h2>What is Module Federation?</h2>
+      <p>Module Federation lets multiple independently deployed JavaScript applications share code <em>at runtime</em>, without npm publish, without build-time coupling. Think of it as <strong>microservices for the frontend</strong>.</p>
+
+      <div class="arch-diagram">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:20px;">THE BIG PICTURE</div>
+        <div class="arch-row">
+          <div class="arch-box host-box">
+            <div class="arch-box-title">SHELL APP</div>
+            <div class="arch-box-sub">Host / Consumer<br>:3000</div>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:24px;color:var(--text-dim);margin:8px 0;">↕ loads at runtime</div>
+        <div class="arch-row">
+          <div class="arch-box remote-box">
+            <div class="arch-box-title">PRODUCT APP</div>
+            <div class="arch-box-sub">Remote<br>:3001</div>
+          </div>
+          <div class="arch-box remote-box">
+            <div class="arch-box-title">CART APP</div>
+            <div class="arch-box-sub">Remote<br>:3002</div>
+          </div>
+          <div class="arch-box remote-box">
+            <div class="arch-box-title">DESIGN SYSTEM</div>
+            <div class="arch-box-sub">Remote<br>:3003</div>
+          </div>
+        </div>
+        <div class="arch-divider"></div>
+        <div class="arch-row">
+          <div class="arch-box shared-box">
+            <div class="arch-box-title">SHARED: react, react-dom</div>
+            <div class="arch-box-sub">Loaded once, shared across all</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>Why it matters — The Old World vs New World</h2>
+      <table>
+        <thead><tr><th>Old World (npm + monorepo)</th><th>Module Federation</th></tr></thead>
+        <tbody>
+          <tr><td>Release requires re-deploying everything</td><td>Deploy each app independently</td></tr>
+          <tr><td>Shared components via npm publish cycle</td><td>Live component sharing at runtime</td></tr>
+          <tr><td>Bundle grows as teams add features</td><td>Each micro-frontend bundles only its code</td></tr>
+          <tr><td>One team can break all other builds</td><td>Teams are fully decoupled at build time</td></tr>
+          <tr><td>Onboarding = clone massive monorepo</td><td>Onboarding = just the micro-frontend</td></tr>
+        </tbody>
+      </table>
+
+      <h2>History Timeline</h2>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-right"><div class="tl-year">2018 — Webpack 4.20</div><div class="tl-text">Module hooks introduced — laid the conceptual groundwork.</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-right"><div class="tl-year">2019 — Webpack 5 / MF 1.0</div><div class="tl-text">Official Module Federation feature shipped. The <code>ModuleFederationPlugin</code> becomes available.</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-right"><div class="tl-year">2023 — MF 2.0</div><div class="tl-text">Runtime decoupled from build tools. Manifest protocol, dynamic TypeScript types, Chrome DevTool, Runtime plugin system, Rspack support.</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-dot"></div></div>
+          <div class="tl-right"><div class="tl-year">Now — MF 2.0+</div><div class="tl-text">SSR support, preloading, data prefetch, Vite/Metro/Rsbuild adapters, Zephyr Cloud deployment.</div></div>
+        </div>
+      </div>
+
+      <div class="section-nav">
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('mental-model', document.querySelector('[data-section=mental-model]'))">Next: Mental Model →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         2. MENTAL MODEL
+    ══════════════════════════════════════════ -->
+    <section class="section" id="mental-model">
+      <div class="chapter-tag">Chapter 02 — Foundation</div>
+      <h1>The Mental Model</h1>
+      <p class="lead">Before touching any config, you need the right mental model. Get this right and everything else clicks.</p>
+
+      <h2>Think in Containers</h2>
+      <p>Every Module Federation app creates a <strong>container</strong>. A container exposes a <code>get()</code> and <code>init()</code> API. That's really all Module Federation is — a standardized way for containers to discover, initialize, and call each other.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">CONCEPT</span><span class="code-file">container interface</span></div>
+        <pre><span class="cmt">// Every remoteEntry.js or mf-manifest.json exposes:</span>
+<span class="kw">interface</span> <span class="fn">Container</span> {
+  <span class="cmt">// Initialize this container with shared scope</span>
+  init(shareScope: <span class="prop">SharedScope</span>): <span class="prop">Promise</span>&lt;<span class="kw">void</span>&gt;;
+
+  <span class="cmt">// Load an exposed module from this container</span>
+  get(module: <span class="prop">string</span>): <span class="prop">Promise</span>&lt;() =&gt; <span class="kw">any</span>&gt;;
+}</pre>
+      </div>
+
+      <h2>The 4 Roles</h2>
+      <div class="flow-row">
+        <div class="flow-card">
+          <div class="fc-num">ROLE 01</div>
+          <div class="fc-title" style="color:var(--host-color)">Host</div>
+          <div class="fc-desc">The app loaded first. Initializes the shared scope. Consumes remote modules.</div>
+        </div>
+        <div class="flow-card">
+          <div class="fc-num">ROLE 02</div>
+          <div class="fc-title" style="color:var(--remote-color)">Remote</div>
+          <div class="fc-desc">An app that exposes modules. Must be running independently. Has its own build.</div>
+        </div>
+        <div class="flow-card">
+          <div class="fc-num">ROLE 03</div>
+          <div class="fc-title" style="color:var(--accent4)">Bidirectional</div>
+          <div class="fc-desc">Can act as both host AND remote. Can consume while being consumed.</div>
+        </div>
+        <div class="flow-card">
+          <div class="fc-num">ROLE 04</div>
+          <div class="fc-title" style="color:var(--accent3)">Shared Scope</div>
+          <div class="fc-desc">The global negotiation layer for dependencies. Prevents duplicate React instances.</div>
+        </div>
+      </div>
+
+      <h2>What Happens at Runtime — Step by Step</h2>
+      <div class="flow-row">
+        <div class="flow-card">
+          <div class="fc-num">STEP 1</div>
+          <div class="fc-title">Host boots</div>
+          <div class="fc-desc">Webpack calls <code>__webpack_require__.I</code>, registering all shared deps.</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-card">
+          <div class="fc-num">STEP 2</div>
+          <div class="fc-title">Manifest fetched</div>
+          <div class="fc-desc">Browser fetches <code>mf-manifest.json</code> (or <code>remoteEntry.js</code>) from remote URL.</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-card">
+          <div class="fc-num">STEP 3</div>
+          <div class="fc-title">init() called</div>
+          <div class="fc-desc">Host passes its <code>shareScope</code> to the remote container so both sync shared deps.</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-card">
+          <div class="fc-num">STEP 4</div>
+          <div class="fc-title">get() called</div>
+          <div class="fc-desc">The specific exposed module's factory is returned, then evaluated.</div>
+        </div>
+      </div>
+
+      <h2>The Critical "Bootstrap" Insight</h2>
+      <p>Module Federation requires that the host and remote negotiate shared deps <em>asynchronously</em> before any module can run. This is why you'll always see an <code>index.js</code> that just does <code>import('./bootstrap')</code>:</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">src/index.js</span></div>
+        <pre><span class="cmt">// ✅ CORRECT — async boundary lets MF negotiate shared deps first</span>
+<span class="kw">import</span>(<span class="str">'./bootstrap'</span>);
+
+<span class="cmt">// ❌ WRONG — synchronous import will cause "Shared module not available for eager consumption"</span>
+<span class="kw">import</span> <span class="prop">React</span> <span class="kw">from</span> <span class="str">'react'</span>;
+<span class="fn">ReactDOM</span>.<span class="fn">render</span>(...);</pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚡ The Most Common Gotcha</div>
+        <strong>Uncaught Error: Shared module is not available for eager consumption</strong> — This is caused by synchronously importing shared modules before the async negotiation completes. Always use the bootstrap pattern or set <code>eager: true</code> on the shared dep.
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">🧠 Quick Check: Why do we put our app code behind <code>import('./bootstrap')</code>?</div>
+        <button class="quiz-option" onclick="answer(this, false)">To make the app load faster</button>
+        <button class="quiz-option" onclick="answer(this, true)">To create an async boundary so MF can negotiate shared deps before any code runs</button>
+        <button class="quiz-option" onclick="answer(this, false)">It's just a Webpack convention with no technical reason</button>
+        <div class="quiz-result" id="quiz-result-0"></div>
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('intro', document.querySelector('[data-section=intro]'))">← Introduction</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('v2', document.querySelector('[data-section=v2]'))">Next: MF 2.0 vs 1.0 →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         3. MF 2.0 vs 1.0
+    ══════════════════════════════════════════ -->
+    <section class="section" id="v2">
+      <div class="chapter-tag">Chapter 03 — Foundation</div>
+      <h1>MF 2.0 vs 1.0</h1>
+      <p class="lead">MF 2.0 isn't just an upgrade — it's a redesign. Here's what's new and why it matters.</p>
+
+      <div class="version-compare">
+        <div class="vc-card vc-v1">
+          <div class="vc-header">MF 1.0 (Webpack 5 built-in)</div>
+          <div class="vc-body">
+            <div class="vc-item">Module export, load, dependency sharing</div>
+            <div class="vc-item">remoteEntry.js as entry point</div>
+            <div class="vc-item">Webpack-only</div>
+            <div class="vc-item">No TypeScript type sharing</div>
+            <div class="vc-item">No debug tooling</div>
+            <div class="vc-item">Runtime tightly coupled to build tool</div>
+            <div class="vc-item">No manifest protocol</div>
+          </div>
+        </div>
+        <div class="vc-card vc-v2">
+          <div class="vc-header">MF 2.0 (@module-federation/enhanced)</div>
+          <div class="vc-body">
+            <div class="vc-item">Everything in 1.0 PLUS…</div>
+            <div class="vc-item"><strong>mf-manifest.json</strong> — deployment-friendly manifest</div>
+            <div class="vc-item"><strong>Federation Runtime</strong> — standalone, build-tool agnostic</div>
+            <div class="vc-item"><strong>Runtime Plugin System</strong> — extend any lifecycle</div>
+            <div class="vc-item"><strong>Dynamic TypeScript types</strong> — auto-generated & synced</div>
+            <div class="vc-item"><strong>Chrome DevTool</strong> — visualize dependencies</div>
+            <div class="vc-item"><strong>Rspack support</strong> — Rust-speed builds</div>
+            <div class="vc-item"><strong>Preloading</strong> — solve the waterfall problem</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>Installing MF 2.0</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span></div>
+        <pre><span class="cmt"># For Webpack projects</span>
+npm install <span class="str">@module-federation/enhanced</span>
+
+<span class="cmt"># For Rspack projects</span>
+npm install <span class="str">@module-federation/enhanced</span> <span class="str">@rspack/core</span>
+
+<span class="cmt"># Scaffold a new project from scratch</span>
+npx <span class="str">create-module-federation@latest</span>
+<span class="cmt"># Select: framework → role (provider/consumer) → name</span></pre>
+      </div>
+
+      <h2>Quick Wiring: Webpack</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">webpack.config.js (remote)</span></div>
+        <pre><span class="kw">const</span> { <span class="prop">ModuleFederationPlugin</span> } = <span class="fn">require</span>(<span class="str">'@module-federation/enhanced/webpack'</span>);
+
+module.exports = {
+  plugins: [
+    <span class="kw">new</span> <span class="fn">ModuleFederationPlugin</span>({
+      name: <span class="str">'product'</span>,
+      exposes: { <span class="str">'./Button'</span>: <span class="str">'./src/Button.tsx'</span> },
+      shared: { react: { singleton: <span class="kw">true</span> }, <span class="str">'react-dom'</span>: { singleton: <span class="kw">true</span> } },
+    }),
+  ],
+};</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">webpack.config.js (host)</span></div>
+        <pre><span class="kw">const</span> { <span class="prop">ModuleFederationPlugin</span> } = <span class="fn">require</span>(<span class="str">'@module-federation/enhanced/webpack'</span>);
+
+module.exports = {
+  plugins: [
+    <span class="kw">new</span> <span class="fn">ModuleFederationPlugin</span>({
+      name: <span class="str">'shell'</span>,
+      remotes: {
+        <span class="cmt">// MF 2.0: point to mf-manifest.json, not remoteEntry.js</span>
+        product: <span class="str">'product@http://localhost:3001/mf-manifest.json'</span>,
+      },
+      shared: { react: { singleton: <span class="kw">true</span> }, <span class="str">'react-dom'</span>: { singleton: <span class="kw">true</span> } },
+    }),
+  ],
+};</pre>
+      </div>
+
+      <div class="callout success">
+        <div class="callout-title">🆕 MF 2.0 Key Change</div>
+        In MF 1.0 you pointed remotes at <code>remoteEntry.js</code>. In MF 2.0 you point at <code>mf-manifest.json</code>. The manifest contains more metadata enabling type hints, preloading, and versioned deployment.
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('mental-model', document.querySelector('[data-section=mental-model]'))">← Mental Model</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('host-remote', document.querySelector('[data-section=host-remote]'))">Next: Host & Remote →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         4. HOST & REMOTE
+    ══════════════════════════════════════════ -->
+    <section class="section" id="host-remote">
+      <div class="chapter-tag">Chapter 04 — Core Concepts</div>
+      <h1>Host & Remote</h1>
+      <p class="lead">These are the two fundamental roles in any MF architecture. Every app is one or both.</p>
+
+      <h2>Host (Consumer)</h2>
+      <p>The host is the app that <strong>consumes</strong> remote modules. It initializes the shared scope (the global pool of shared dependencies) and requests modules from remotes at runtime. The host boots first — its <code>remoteEntry</code> or <code>mf-manifest.json</code> is loaded and <code>init()</code> is called to register shared deps.</p>
+
+      <h2>Remote (Provider)</h2>
+      <p>The remote is the app that <strong>provides</strong> modules. It runs as its own web server, has its own build, and exposes specific modules via the <code>exposes</code> config. It does NOT need to know about the host at all — complete decoupling.</p>
+
+      <h2>Bidirectional: Host + Remote at Once</h2>
+      <p>A single app can be both. This is the most common real-world setup in large systems:</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">app-B/webpack.config.js (host AND remote)</span></div>
+        <pre><span class="kw">new</span> <span class="fn">ModuleFederationPlugin</span>({
+  name: <span class="str">'appB'</span>,
+  <span class="cmt">// Acting as REMOTE — exposing to others</span>
+  exposes: {
+    <span class="str">'./Checkout'</span>: <span class="str">'./src/Checkout.tsx'</span>,
+  },
+  <span class="cmt">// Acting as HOST — consuming from others</span>
+  remotes: {
+    designSystem: <span class="str">'ds@http://localhost:3003/mf-manifest.json'</span>,
+  },
+  shared: { react: { singleton: <span class="kw">true</span> } },
+})</pre>
+      </div>
+
+      <h2>Full Real-World Example: E-Commerce Shell</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JSX</span><span class="code-file">shell/src/App.tsx</span></div>
+        <pre><span class="kw">import</span> <span class="prop">React</span>, { <span class="prop">Suspense</span>, <span class="prop">lazy</span> } <span class="kw">from</span> <span class="str">'react'</span>;
+
+<span class="cmt">// Dynamic import from 'product' remote → MF loads it lazily</span>
+<span class="kw">const</span> <span class="prop">ProductList</span> = <span class="fn">lazy</span>(() => <span class="kw">import</span>(<span class="str">'product/ProductList'</span>));
+<span class="kw">const</span> <span class="prop">Cart</span>        = <span class="fn">lazy</span>(() => <span class="kw">import</span>(<span class="str">'cart/Cart'</span>));
+<span class="kw">const</span> <span class="prop">Header</span>      = <span class="fn">lazy</span>(() => <span class="kw">import</span>(<span class="str">'designSystem/Header'</span>));
+
+<span class="kw">export default function</span> <span class="fn">App</span>() {
+  <span class="kw">return</span> (
+    <span class="tag">&lt;Suspense</span> <span class="prop">fallback</span>=<span class="str">"Loading…"</span><span class="tag">&gt;</span>
+      <span class="tag">&lt;Header</span> <span class="prop">title</span>=<span class="str">"My Store"</span> <span class="tag">/&gt;</span>
+      <span class="tag">&lt;ProductList</span> <span class="prop">category</span>=<span class="str">"electronics"</span> <span class="tag">/&gt;</span>
+      <span class="tag">&lt;Cart</span> <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/Suspense&gt;</span>
+  );
+}</pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-title">💡 Pro Pattern: Error Boundary + Suspense</div>
+        Always wrap remote imports in both <code>&lt;Suspense&gt;</code> and an <code>&lt;ErrorBoundary&gt;</code>. If the remote is down, you want a graceful fallback, not a crashed host app.
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('v2', document.querySelector('[data-section=v2]'))">← MF 2.0 vs 1.0</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('exposes', document.querySelector('[data-section=exposes]'))">Next: exposes →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         5. EXPOSES
+    ══════════════════════════════════════════ -->
+    <section class="section" id="exposes">
+      <div class="chapter-tag">Chapter 05 — Core Concepts</div>
+      <h1>exposes</h1>
+      <p class="lead">The config that turns your app into a provider. You declare exactly what you want to share with the world.</p>
+
+      <h2>Basic Syntax</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span></div>
+        <pre>exposes: {
+  <span class="cmt">// alias (what consumers will import) : actual file path</span>
+  <span class="str">'./Button'</span>:        <span class="str">'./src/components/Button.tsx'</span>,
+  <span class="str">'./Modal'</span>:         <span class="str">'./src/components/Modal.tsx'</span>,
+  <span class="str">'./useAuth'</span>:       <span class="str">'./src/hooks/useAuth.ts'</span>,
+  <span class="str">'./utils/format'</span>:  <span class="str">'./src/utils/format.ts'</span>,
+  <span class="str">'.'</span>:               <span class="str">'./src/index.ts'</span>, <span class="cmt">// expose root</span>
+}</pre>
+      </div>
+
+      <h2>What Can You Expose?</h2>
+      <p>Anything Webpack can bundle: React components, Vue components, utility functions, hooks, stores, full pages, even CSS modules. The exposed module becomes its own async chunk in the remote's build.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JSX</span><span class="code-file">src/components/Button.tsx (the exposed module)</span></div>
+        <pre><span class="cmt">// This file lives in the REMOTE app (product/:3001)</span>
+<span class="kw">import</span> <span class="prop">React</span> <span class="kw">from</span> <span class="str">'react'</span>;
+
+<span class="kw">interface</span> <span class="prop">Props</span> {
+  label: <span class="prop">string</span>;
+  onClick?: () => <span class="kw">void</span>;
+  variant?: <span class="str">'primary'</span> | <span class="str">'secondary'</span>;
+}
+
+<span class="kw">export default function</span> <span class="fn">Button</span>({ label, onClick, variant = <span class="str">'primary'</span> }: <span class="prop">Props</span>) {
+  <span class="kw">return</span> <span class="tag">&lt;button</span> <span class="prop">className</span>=<span class="str">{`btn btn-${variant}`}</span> <span class="prop">onClick</span>={onClick}<span class="tag">&gt;</span>{label}<span class="tag">&lt;/button&gt;</span>;
+}</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JSX</span><span class="code-file">shell/src/SomePage.tsx (the consumer)</span></div>
+        <pre><span class="cmt">// HOST app consuming the exposed Button</span>
+<span class="kw">import</span> <span class="prop">React</span>, { <span class="prop">lazy</span>, <span class="prop">Suspense</span> } <span class="kw">from</span> <span class="str">'react'</span>;
+
+<span class="cmt">// "product" is the remote name, "/Button" is the expose alias</span>
+<span class="kw">const</span> <span class="prop">Button</span> = <span class="fn">lazy</span>(() => <span class="kw">import</span>(<span class="str">'product/Button'</span>));
+
+<span class="kw">export default function</span> <span class="fn">Page</span>() {
+  <span class="kw">return</span> (
+    <span class="tag">&lt;Suspense</span> <span class="prop">fallback</span>=<span class="str">"…"</span><span class="tag">&gt;</span>
+      <span class="tag">&lt;Button</span> <span class="prop">label</span>=<span class="str">"Add to Cart"</span> <span class="prop">onClick</span>={() => console.log(<span class="str">'clicked'</span>)} <span class="tag">/&gt;</span>
+    <span class="tag">&lt;/Suspense&gt;</span>
+  );
+}</pre>
+      </div>
+
+      <h2>How exposes works under the hood</h2>
+      <p>When you add an entry to <code>exposes</code>, Webpack's <code>ContainerPlugin</code> creates a new compilation entry for that module. It gets bundled into its own async chunk. The <code>remoteEntry.js</code> (or manifest) acts as the directory — it knows the chunk IDs of every exposed module and will load only the right chunk when the host calls <code>container.get('./Button')</code>.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">remoteEntry.js (auto-generated, simplified)</span></div>
+        <pre><span class="cmt">// Webpack auto-generates this. You never write it manually.</span>
+<span class="kw">var</span> <span class="prop">product</span>;
+<span class="prop">product</span> = {
+  <span class="fn">get</span>(module) {
+    <span class="fn">ensureChunk</span>(<span class="str">'src_components_Button'</span>); <span class="cmt">// lazy loads the chunk</span>
+    <span class="kw">return</span> __webpack_require__(<span class="str">'./src/components/Button.tsx'</span>);
+  },
+  <span class="fn">init</span>(shareScope) {
+    <span class="cmt">// Syncs shared deps (react, etc.) with host</span>
+    __webpack_require__.<span class="prop">S</span>[<span class="str">'default'</span>] = shareScope;
+  }
+};</pre>
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('host-remote', document.querySelector('[data-section=host-remote]'))">← Host & Remote</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('remotes-cfg', document.querySelector('[data-section=remotes-cfg]'))">Next: remotes →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         6. REMOTES CONFIG
+    ══════════════════════════════════════════ -->
+    <section class="section" id="remotes-cfg">
+      <div class="chapter-tag">Chapter 06 — Core Concepts</div>
+      <h1>remotes</h1>
+      <p class="lead">How the host declares which external apps it wants to consume modules from.</p>
+
+      <h2>Syntax</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span></div>
+        <pre>remotes: {
+  <span class="cmt">// localAlias: 'remoteName@URL_to_manifest_or_remoteEntry'</span>
+
+  <span class="cmt">// MF 2.0 style — points to mf-manifest.json</span>
+  product: <span class="str">'product@http://localhost:3001/mf-manifest.json'</span>,
+
+  <span class="cmt">// MF 1.0 style — still works in 2.0</span>
+  cart: <span class="str">'cart@http://localhost:3002/remoteEntry.js'</span>,
+
+  <span class="cmt">// Use localAlias that differs from remoteName</span>
+  ds: <span class="str">'designSystem@http://localhost:3003/mf-manifest.json'</span>,
+}</pre>
+      </div>
+
+      <h2>Dynamic Remotes at Runtime</h2>
+      <p>Sometimes you don't know the URL at build time (e.g., it depends on env, feature flags, or A/B tests). Use the Runtime API to register remotes dynamically:</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span><span class="code-file">src/bootstrap.ts</span></div>
+        <pre><span class="kw">import</span> { <span class="prop">registerRemotes</span> } <span class="kw">from</span> <span class="str">'@module-federation/enhanced/runtime'</span>;
+
+<span class="cmt">// Fetch config from your feature-flag service or API</span>
+<span class="kw">const</span> config = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/api/mf-config'</span>).then(r => r.json());
+
+<span class="fn">registerRemotes</span>([
+  { name: <span class="str">'product'</span>, entry: config.productUrl },
+  { name: <span class="str">'cart'</span>,    entry: config.cartUrl },
+]);
+
+<span class="cmt">// Now you can use import('product/ProductList') as normal</span></pre>
+      </div>
+
+      <h2>Promise-based Remotes (MF 1.0 pattern)</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">webpack.config.js</span></div>
+        <pre>remotes: {
+  <span class="cmt">// Promise-based: lets you async-resolve the URL before webpack uses it</span>
+  product: <span class="str">`promise new Promise(resolve => {
+    const url = window.mfConfig?.productUrl || 'http://localhost:3001/remoteEntry.js';
+    const script = document.createElement('script');
+    script.src = url;
+    script.onload = () => {
+      resolve({
+        get: (request) => window.product.get(request),
+        init: (scope) => {
+          try { window.product.init(scope); } catch(e) {}
+        }
+      });
+    };
+    document.head.appendChild(script);
+  })`</span>,
+}</pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-title">💡 MF 2.0 Preferred Approach</div>
+        Instead of the verbose Promise syntax above, in MF 2.0 just use <code>registerRemotes()</code> from the Runtime API. It's cleaner and supports the Manifest protocol.
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('exposes', document.querySelector('[data-section=exposes]'))">← exposes</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('shared', document.querySelector('[data-section=shared]'))">Next: shared →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         7. SHARED
+    ══════════════════════════════════════════ -->
+    <section class="section" id="shared">
+      <div class="chapter-tag">Chapter 07 — Core Concepts</div>
+      <h1>shared</h1>
+      <p class="lead">The most powerful and most misunderstood config. Get this wrong and you'll have multiple Reacts fighting each other.</p>
+
+      <h2>What is shared?</h2>
+      <p>When host and remote both depend on React, without <code>shared</code> you'd download React twice. With <code>shared</code>, they negotiate at runtime: "I have React 18.2 — do you want to use mine?" If versions are compatible, only one copy runs.</p>
+
+      <div class="arch-diagram">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:20px;">SHARED SCOPE NEGOTIATION</div>
+        <div class="arch-row">
+          <div class="arch-box host-box">
+            <div class="arch-box-title">HOST</div>
+            <div class="arch-box-sub">react@18.2.0<br>react-dom@18.2.0</div>
+          </div>
+          <div class="arch-arrow" style="padding:0;font-size:14px;color:var(--text-dim);">→ shareScope →</div>
+          <div class="arch-box shared-box">
+            <div class="arch-box-title">SHARED SCOPE</div>
+            <div class="arch-box-sub">{ react: { "18.2.0": factory } }</div>
+          </div>
+          <div class="arch-arrow" style="padding:0;font-size:14px;color:var(--text-dim);">← syncs ←</div>
+          <div class="arch-box remote-box">
+            <div class="arch-box-title">REMOTE</div>
+            <div class="arch-box-sub">react@18.2.0<br>(already loaded? skip!)</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>All shared Options</h2>
+      <div class="prop-grid">
+        <div class="prop-card">
+          <div class="pc-name">singleton</div>
+          <div class="pc-type">boolean</div>
+          <div class="pc-desc">Only one instance ever. If versions conflict, warn but use the highest loaded version. Essential for React, React-DOM, stores.</div>
+        </div>
+        <div class="prop-card">
+          <div class="pc-name">requiredVersion</div>
+          <div class="pc-type">string (semver)</div>
+          <div class="pc-desc">e.g. <code>"^18.0.0"</code>. Specifies what version range is acceptable. If mismatch, MF will warn and may fallback to bundling its own.</div>
+        </div>
+        <div class="prop-card">
+          <div class="pc-name">eager</div>
+          <div class="pc-type">boolean</div>
+          <div class="pc-desc">Don't put in async chunk. Include synchronously in initial bundle. Use when you MUST have a dep available before the async boundary.</div>
+        </div>
+        <div class="prop-card">
+          <div class="pc-name">strictVersion</div>
+          <div class="pc-type">boolean</div>
+          <div class="pc-desc">Throw an error (not just a warning) if the version doesn't match. Safer but less flexible.</div>
+        </div>
+        <div class="prop-card">
+          <div class="pc-name">shareScope</div>
+          <div class="pc-type">string</div>
+          <div class="pc-desc">Default is <code>"default"</code>. You can create isolated scopes to avoid cross-contamination between unrelated MF groups.</div>
+        </div>
+        <div class="prop-card">
+          <div class="pc-name">version</div>
+          <div class="pc-type">string</div>
+          <div class="pc-desc">Override the version reported. Useful in monorepos where package.json version isn't the truth.</div>
+        </div>
+      </div>
+
+      <h2>Comprehensive shared Config Example</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">webpack.config.js</span></div>
+        <pre>shared: {
+  <span class="cmt">// Bare minimum — just declare it</span>
+  lodash: <span class="str">'lodash'</span>,
+
+  <span class="cmt">// With options</span>
+  react: {
+    singleton: <span class="kw">true</span>,
+    requiredVersion: <span class="str">'^18.0.0'</span>,
+    <span class="cmt">// eager: true  ← use only in root host to avoid "Shared module not available" error</span>
+  },
+  <span class="str">'react-dom'</span>: {
+    singleton: <span class="kw">true</span>,
+    requiredVersion: <span class="str">'^18.0.0'</span>,
+  },
+
+  <span class="cmt">// Your own shared library</span>
+  <span class="str">'@myorg/design-tokens'</span>: {
+    singleton: <span class="kw">true</span>,
+    requiredVersion: <span class="str">'>=1.0.0'</span>,
+  },
+
+  <span class="cmt">// State management — MUST be singleton or stores break</span>
+  <span class="str">'@reduxjs/toolkit'</span>: {
+    singleton: <span class="kw">true</span>,
+    requiredVersion: <span class="str">'^2.0.0'</span>,
+  },
+  <span class="str">'react-redux'</span>: {
+    singleton: <span class="kw">true</span>,
+    requiredVersion: <span class="str">'^9.0.0'</span>,
+  },
+}</pre>
+      </div>
+
+      <h2>The Version Conflict Matrix</h2>
+      <table>
+        <thead><tr><th>Scenario</th><th>singleton</th><th>strictVersion</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Host: React 18 / Remote: React 18</td><td>true</td><td>false</td><td style="color:var(--accent2)">✅ Shared perfectly</td></tr>
+          <tr><td>Host: React 18 / Remote: React 17</td><td>true</td><td>false</td><td style="color:var(--accent3)">⚠️ Warning, uses React 18</td></tr>
+          <tr><td>Host: React 18 / Remote: React 17</td><td>true</td><td>true</td><td style="color:#ef4444">❌ Error thrown</td></tr>
+          <tr><td>Host: React 18 / Remote: React 17</td><td>false</td><td>false</td><td style="color:var(--accent3)">⚠️ Both loaded (2 Reacts!)</td></tr>
+          <tr><td>No shared configured at all</td><td>—</td><td>—</td><td style="color:#ef4444">❌ Both bundled, 2 Reacts</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warning">
+        <div class="callout-title">⚡ The Two-React Problem</div>
+        If React is loaded twice, you'll see "Invalid hook call" or "React is not defined" — cryptic errors that are hard to debug. The fix: ensure both host and remote declare <code>react: &#123; singleton: true &#125;</code> and have compatible versions.
+      </div>
+
+      <div class="quiz">
+        <div class="quiz-q">🧠 If Host has React 18 and Remote has React 17 with <code>singleton: true, strictVersion: false</code>, what happens?</div>
+        <button class="quiz-option" onclick="answer(this, false)">React 17 is used by both (lower version wins)</button>
+        <button class="quiz-option" onclick="answer(this, true)">React 18 is used by both with a warning (highest loaded version wins)</button>
+        <button class="quiz-option" onclick="answer(this, false)">Both load their own React independently</button>
+        <div class="quiz-result" id="quiz-result-1"></div>
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('remotes-cfg', document.querySelector('[data-section=remotes-cfg]'))">← remotes</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('manifest', document.querySelector('[data-section=manifest]'))">Next: Manifest →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         8. MANIFEST
+    ══════════════════════════════════════════ -->
+    <section class="section" id="manifest">
+      <div class="chapter-tag">Chapter 08 — MF 2.0 Features</div>
+      <h1>mf-manifest.json</h1>
+      <p class="lead">The game-changer in MF 2.0. A self-describing contract file that enables types, preloading, versioned deployments, and more.</p>
+
+      <div class="callout success">
+        <div class="callout-title">🆕 New in MF 2.0</div>
+        The manifest file is automatically generated by <code>@module-federation/enhanced</code>. You get it for free — just set your remote URL to point at <code>mf-manifest.json</code>.
+      </div>
+
+      <h2>What's Inside mf-manifest.json</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JSON</span><span class="code-file">dist/mf-manifest.json (auto-generated)</span></div>
+        <pre>{
+  <span class="prop">"id"</span>: <span class="str">"product"</span>,
+  <span class="prop">"name"</span>: <span class="str">"product"</span>,
+  <span class="prop">"metaData"</span>: {
+    <span class="prop">"buildInfo"</span>: { <span class="prop">"buildVersion"</span>: <span class="str">"1.0.0"</span>, <span class="prop">"buildName"</span>: <span class="str">"product"</span> },
+    <span class="prop">"remoteEntry"</span>: {
+      <span class="prop">"name"</span>: <span class="str">"remoteEntry.js"</span>,
+      <span class="prop">"path"</span>: <span class="str">""</span>,
+      <span class="prop">"type"</span>: <span class="str">"module"</span>
+    },
+    <span class="prop">"types"</span>: {
+      <span class="prop">"path"</span>: <span class="str">""</span>,
+      <span class="prop">"name"</span>: <span class="str">"@mf-types.zip"</span>, <span class="cmt">// ← TypeScript types ZIP!</span>
+      <span class="prop">"api"</span>: <span class="str">"@mf-types-api.json"</span>
+    },
+    <span class="prop">"publicPath"</span>: <span class="str">"http://localhost:3001/"</span>
+  },
+  <span class="prop">"shared"</span>: [
+    { <span class="prop">"id"</span>: <span class="str">"product:react"</span>, <span class="prop">"name"</span>: <span class="str">"react"</span>, <span class="prop">"version"</span>: <span class="str">"18.2.0"</span> }
+  ],
+  <span class="prop">"remotes"</span>: [],
+  <span class="prop">"exposes"</span>: [
+    {
+      <span class="prop">"id"</span>: <span class="str">"product:./Button"</span>,
+      <span class="prop">"name"</span>: <span class="str">"./Button"</span>,
+      <span class="prop">"assets"</span>: {
+        <span class="prop">"js"</span>: { <span class="prop">"async"</span>: [<span class="str">"src_Button_tsx.js"</span>], <span class="prop">"sync"</span>: [] },
+        <span class="prop">"css"</span>: { <span class="prop">"async"</span>: [], <span class="prop">"sync"</span>: [] }
+      },
+      <span class="prop">"path"</span>: <span class="str">"./Button"</span>
+    }
+  ]
+}</pre>
+      </div>
+
+      <h2>What the Manifest Enables</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="icon">📦</div>
+          <div class="fc-t">Type Sharing</div>
+          <div class="fc-d">The <code>types.name</code> field points to a <code>@mf-types.zip</code> — the consumer can automatically download TypeScript types from the remote.</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">⚡</div>
+          <div class="fc-t">Preloading</div>
+          <div class="fc-d">The <code>assets</code> field per expose lists all chunks. The Runtime can prefetch them before you even call <code>import()</code>.</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🚀</div>
+          <div class="fc-t">Versioned Deployment</div>
+          <div class="fc-d">Platforms like Zephyr Cloud use manifest metadata for canary releases, A/B testing, and rollback — without redeploying the host.</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🔍</div>
+          <div class="fc-t">Dependency Analysis</div>
+          <div class="fc-d">The Chrome DevTool reads the manifest to visualize which shared deps are used, from which version, and where collisions exist.</div>
+        </div>
+      </div>
+
+      <h2>Enabling Manifest in Config</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">webpack.config.js</span></div>
+        <pre><span class="kw">const</span> { <span class="prop">ModuleFederationPlugin</span> } = <span class="fn">require</span>(<span class="str">'@module-federation/enhanced/webpack'</span>);
+
+module.exports = {
+  plugins: [
+    <span class="kw">new</span> <span class="fn">ModuleFederationPlugin</span>({
+      name: <span class="str">'product'</span>,
+      exposes: { <span class="str">'./Button'</span>: <span class="str">'./src/Button.tsx'</span> },
+      shared: { react: { singleton: <span class="kw">true</span> } },
+      <span class="cmt">// Manifest is auto-generated! Optional custom config:</span>
+      manifest: {
+        fileName: <span class="str">'mf-manifest.json'</span>,  <span class="cmt">// default</span>
+        filePath: <span class="str">''</span>,                   <span class="cmt">// relative to output.path</span>
+        disableAssetsAnalyze: <span class="kw">false</span>,   <span class="cmt">// set true to speed up complex builds</span>
+      },
+    }),
+  ],
+};</pre>
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('shared', document.querySelector('[data-section=shared]'))">← shared</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('runtime', document.querySelector('[data-section=runtime]'))">Next: Federation Runtime →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         9. FEDERATION RUNTIME
+    ══════════════════════════════════════════ -->
+    <section class="section" id="runtime">
+      <div class="chapter-tag">Chapter 09 — MF 2.0 Features</div>
+      <h1>Federation Runtime</h1>
+      <p class="lead">The standalone JavaScript runtime that powers MF 2.0. Decoupled from any build tool — works with Webpack, Rspack, Vite, or plain script tags.</p>
+
+      <h2>Why a Standalone Runtime?</h2>
+      <p>In MF 1.0, the federation logic was baked into Webpack's runtime. You couldn't use it without Webpack, and you couldn't extend it. MF 2.0 extracts this into <code>@module-federation/runtime</code> — a separate, embeddable, pluggable runtime.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span></div>
+        <pre>npm install <span class="str">@module-federation/enhanced</span>
+<span class="cmt"># Runtime is included in @module-federation/enhanced/runtime</span></pre>
+      </div>
+
+      <h2>Standalone Runtime (no build tool needed)</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span><span class="code-file">runtime-only usage</span></div>
+        <pre><span class="kw">import</span> { <span class="prop">init</span>, <span class="prop">loadRemote</span>, <span class="prop">loadShare</span> } <span class="kw">from</span> <span class="str">'@module-federation/enhanced/runtime'</span>;
+
+<span class="cmt">// 1. Initialize the runtime</span>
+<span class="fn">init</span>({
+  name: <span class="str">'shell'</span>,
+  remotes: [
+    {
+      name: <span class="str">'product'</span>,
+      alias: <span class="str">'product'</span>,
+      entry: <span class="str">'http://localhost:3001/mf-manifest.json'</span>,
+    },
+    {
+      name: <span class="str">'cart'</span>,
+      entry: <span class="str">'http://localhost:3002/remoteEntry.js'</span>, <span class="cmt">// MF 1.0 compat</span>
+    },
+  ],
+  shared: {
+    react: {
+      version: <span class="str">'18.2.0'</span>,
+      scope: <span class="str">'default'</span>,
+      lib: () => <span class="fn">require</span>(<span class="str">'react'</span>), <span class="cmt">// factory function</span>
+      shareConfig: { singleton: <span class="kw">true</span>, requiredVersion: <span class="str">'^18.0.0'</span> },
+    },
+  },
+});
+
+<span class="cmt">// 2. Load a remote module</span>
+<span class="kw">const</span> { <span class="kw">default</span>: <span class="prop">Button</span> } = <span class="kw">await</span> <span class="fn">loadRemote</span><span class="tag">&lt;</span>{ <span class="kw">default</span>: <span class="prop">React.FC</span> }<span class="tag">&gt;</span>(<span class="str">'product/Button'</span>);
+
+<span class="cmt">// 3. Load a shared module</span>
+<span class="kw">const</span> reactFactory = <span class="kw">await</span> <span class="fn">loadShare</span>(<span class="str">'react'</span>);
+<span class="kw">const</span> React = <span class="fn">reactFactory</span>();</pre>
+      </div>
+
+      <h2>createInstance — Multiple Federation Instances</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span></div>
+        <pre><span class="kw">import</span> { <span class="prop">createInstance</span> } <span class="kw">from</span> <span class="str">'@module-federation/enhanced/runtime'</span>;
+
+<span class="cmt">// When you need isolated MF instances (e.g., micro-frontend within micro-frontend)</span>
+<span class="kw">const</span> mf = <span class="fn">createInstance</span>({
+  name: <span class="str">'isolatedHost'</span>,
+  remotes: [{ name: <span class="str">'sub1'</span>, entry: <span class="str">'http://localhost:8080/mf-manifest.json'</span> }],
+});
+
+<span class="kw">const</span> mod = <span class="kw">await</span> mf.<span class="fn">loadRemote</span>(<span class="str">'sub1/util'</span>);
+mod.<span class="fn">add</span>(<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>);
+
+<span class="cmt">// Debug: inspect all instances in browser console</span>
+<span class="cmt">// __FEDERATION__.__INSTANCES__</span></pre>
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('manifest', document.querySelector('[data-section=manifest]'))">← Manifest</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('runtime-api', document.querySelector('[data-section=runtime-api]'))">Next: Runtime API →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         10. RUNTIME API
+    ══════════════════════════════════════════ -->
+    <section class="section" id="runtime-api">
+      <div class="chapter-tag">Chapter 10 — MF 2.0 Features</div>
+      <h1>Runtime API</h1>
+      <p class="lead">All the imperative APIs you need to control MF at runtime: load modules, register remotes, prefetch, and customize sharing.</p>
+
+      <h2>The Full API Surface</h2>
+      <table>
+        <thead><tr><th>API</th><th>Purpose</th><th>When to Use</th></tr></thead>
+        <tbody>
+          <tr><td><code>init(options)</code></td><td>Bootstrap the MF runtime</td><td>App startup</td></tr>
+          <tr><td><code>loadRemote(id)</code></td><td>Load a specific exposed module</td><td>Lazy loading</td></tr>
+          <tr><td><code>loadShare(name)</code></td><td>Load a shared dependency</td><td>Custom sharing logic</td></tr>
+          <tr><td><code>preloadRemote(args)</code></td><td>Prefetch remote chunks</td><td>Performance optimization</td></tr>
+          <tr><td><code>registerRemotes(list)</code></td><td>Dynamically add remotes</td><td>Runtime config / feature flags</td></tr>
+          <tr><td><code>registerShared(map)</code></td><td>Dynamically add shared deps</td><td>Lazy shared registration</td></tr>
+          <tr><td><code>registerPlugins(list)</code></td><td>Add runtime plugins</td><td>Extend MF behavior</td></tr>
+          <tr><td><code>getInstance()</code></td><td>Get the active MF instance</td><td>Access instance from anywhere</td></tr>
+          <tr><td><code>createInstance(opts)</code></td><td>Create isolated instance</td><td>Nested MF architectures</td></tr>
+        </tbody>
+      </table>
+
+      <h2>preloadRemote — Solve the Waterfall</h2>
+      <p>The classic problem: Shell boots → fetches manifest → fetches remote chunks → finally renders. That's 3 serial round trips. Preloading collapses them:</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span><span class="code-file">src/bootstrap.ts</span></div>
+        <pre><span class="kw">import</span> { <span class="prop">init</span>, <span class="prop">preloadRemote</span> } <span class="kw">from</span> <span class="str">'@module-federation/enhanced/runtime'</span>;
+
+<span class="fn">init</span>({ name: <span class="str">'shell'</span>, remotes: [{ name: <span class="str">'product'</span>, entry: <span class="str">'http://localhost:3001/mf-manifest.json'</span> }] });
+
+<span class="cmt">// Kick off preloading BEFORE user navigates to that page</span>
+<span class="fn">preloadRemote</span>([
+  {
+    nameOrAlias: <span class="str">'product'</span>,
+    exposes: [<span class="str">'./ProductList'</span>, <span class="str">'./ProductDetail'</span>],
+    resourceCategory: <span class="str">'all'</span>,       <span class="cmt">// 'all' | 'sync'</span>
+    prefetchInterface: <span class="kw">true</span>,        <span class="cmt">// also prefetch the manifest</span>
+  }
+]);
+
+<span class="cmt">// By the time user clicks "Products", the chunks are already in cache!</span></pre>
+      </div>
+
+      <h2>loadShare with Custom Resolver</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span></div>
+        <pre><span class="kw">import</span> { <span class="prop">loadShare</span> } <span class="kw">from</span> <span class="str">'@module-federation/enhanced/runtime'</span>;
+
+<span class="cmt">// Advanced: pick a specific version from shared scope</span>
+<span class="kw">const</span> reactFactory = <span class="kw">await</span> <span class="fn">loadShare</span>(<span class="str">'react'</span>, {
+  resolver: (sharedOptions) => {
+    <span class="cmt">// sharedOptions = all registered versions of react</span>
+    <span class="kw">return</span> sharedOptions.<span class="fn">find</span>(i => i.version === <span class="str">'18.2.0'</span>) ?? sharedOptions[<span class="num">0</span>];
+  }
+});
+<span class="kw">const</span> React = <span class="fn">reactFactory</span>();</pre>
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('runtime', document.querySelector('[data-section=runtime]'))">← Federation Runtime</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('runtime-hooks', document.querySelector('[data-section=runtime-hooks]'))">Next: Runtime Hooks & Plugins →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         11. RUNTIME HOOKS & PLUGINS
+    ══════════════════════════════════════════ -->
+    <section class="section" id="runtime-hooks">
+      <div class="chapter-tag">Chapter 11 — MF 2.0 Features</div>
+      <h1>Runtime Hooks & Plugin System</h1>
+      <p class="lead">The most powerful extensibility in MF 2.0. Hook into any part of the loading lifecycle.</p>
+
+      <h2>Available Hooks</h2>
+      <table>
+        <thead><tr><th>Hook</th><th>When it fires</th><th>Use case</th></tr></thead>
+        <tbody>
+          <tr><td><code>beforeInit</code></td><td>Before MF instance initializes</td><td>Inject custom options</td></tr>
+          <tr><td><code>init</code></td><td>After initialization</td><td>Side effects on start</td></tr>
+          <tr><td><code>beforeRequest</code></td><td>Before resolving a remote module</td><td>Redirect, rewrite IDs</td></tr>
+          <tr><td><code>afterResolve</code></td><td>After remote info is resolved from manifest</td><td>Modify resolved info</td></tr>
+          <tr><td><code>onLoad</code></td><td>After a module chunk is loaded</td><td>Module transformation</td></tr>
+          <tr><td><code>errorLoadRemote</code></td><td>When loading a remote fails</td><td>Fallback components</td></tr>
+          <tr><td><code>fetch</code></td><td>When fetching the manifest JSON</td><td>Auth headers, custom fetch</td></tr>
+          <tr><td><code>loadEntry</code></td><td>When loading the container entry</td><td>Custom loading strategies</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Plugin Structure</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span><span class="code-file">plugins/auth-plugin.ts</span></div>
+        <pre><span class="kw">import type</span> { <span class="prop">FederationRuntimePlugin</span> } <span class="kw">from</span> <span class="str">'@module-federation/enhanced/runtime'</span>;
+
+<span class="kw">export default function</span> <span class="fn">authPlugin</span>(): <span class="prop">FederationRuntimePlugin</span> {
+  <span class="kw">return</span> {
+    name: <span class="str">'auth-plugin'</span>,
+
+    <span class="cmt">// Add auth token to every manifest fetch</span>
+    <span class="fn">fetch</span>(url, init) {
+      <span class="kw">const</span> token = localStorage.<span class="fn">getItem</span>(<span class="str">'jwt'</span>);
+      <span class="kw">return</span> <span class="fn">fetch</span>(url, {
+        ...init,
+        headers: { ...init?.headers, <span class="prop">Authorization</span>: <span class="str">`Bearer ${token}`</span> },
+      });
+    },
+  };
+}</pre>
+      </div>
+
+      <h2>Fallback Plugin — Production Essential</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span><span class="code-file">plugins/fallback-plugin.ts</span></div>
+        <pre><span class="kw">import type</span> { <span class="prop">FederationRuntimePlugin</span> } <span class="kw">from</span> <span class="str">'@module-federation/enhanced/runtime'</span>;
+<span class="kw">import</span> <span class="prop">FallbackButton</span> <span class="kw">from</span> <span class="str">'./FallbackButton'</span>;
+
+<span class="kw">export default function</span> <span class="fn">fallbackPlugin</span>(): <span class="prop">FederationRuntimePlugin</span> {
+  <span class="kw">return</span> {
+    name: <span class="str">'fallback-plugin'</span>,
+
+    <span class="fn">errorLoadRemote</span>({ lifecycle, id, error }) {
+      console.<span class="fn">warn</span>(<span class="str">`[MF] Failed to load ${id} at ${lifecycle}:`</span>, error);
+
+      <span class="kw">switch</span> (lifecycle) {
+        <span class="kw">case</span> <span class="str">'afterResolve'</span>: <span class="cmt">// Manifest fetch failed</span>
+          <span class="kw">return</span> {
+            id,
+            name: id,
+            metaData: { remoteEntry: { name: <span class="str">'fallback'</span>, path: <span class="str">''</span>, type: <span class="str">'global'</span> } },
+            shared: [], remotes: [], exposes: [],
+          };
+
+        <span class="kw">case</span> <span class="str">'onLoad'</span>: <span class="cmt">// Module chunk failed to load</span>
+          <span class="kw">return</span> {
+            <span class="fn">factory</span>: () => ({ <span class="kw">default</span>: <span class="prop">FallbackButton</span> })
+          };
+
+        <span class="kw">default</span>:
+          <span class="kw">return</span> <span class="kw">void</span> <span class="num">0</span>;
+      }
+    }
+  };
+}</pre>
+      </div>
+
+      <h2>Registering Plugins</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span><span class="code-file">src/bootstrap.ts</span></div>
+        <pre><span class="kw">import</span> { <span class="prop">init</span> } <span class="kw">from</span> <span class="str">'@module-federation/enhanced/runtime'</span>;
+<span class="kw">import</span> <span class="prop">authPlugin</span> <span class="kw">from</span> <span class="str">'./plugins/auth-plugin'</span>;
+<span class="kw">import</span> <span class="prop">fallbackPlugin</span> <span class="kw">from</span> <span class="str">'./plugins/fallback-plugin'</span>;
+
+<span class="fn">init</span>({
+  name: <span class="str">'shell'</span>,
+  remotes: [{ name: <span class="str">'product'</span>, entry: <span class="str">'http://localhost:3001/mf-manifest.json'</span> }],
+  plugins: [<span class="fn">authPlugin</span>(), <span class="fn">fallbackPlugin</span>()],
+});</pre>
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('runtime-api', document.querySelector('[data-section=runtime-api]'))">← Runtime API</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('types', document.querySelector('[data-section=types]'))">Next: Dynamic Type Hints →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         12. DYNAMIC TYPES
+    ══════════════════════════════════════════ -->
+    <section class="section" id="types">
+      <div class="chapter-tag">Chapter 12 — MF 2.0 Features</div>
+      <h1>Dynamic Type Hints</h1>
+      <p class="lead">One of MF 2.0's killer features. Auto-generate and auto-sync TypeScript types from remotes — no manual type sharing.</p>
+
+      <h2>The Problem it Solves</h2>
+      <p>In MF 1.0, if Remote A exposes a <code>Button</code> component and Host B uses it, Host B has <strong>no TypeScript types</strong> for <code>Button</code> unless Remote A publishes an npm package or you manually copy types. With large teams this becomes a nightmare.</p>
+
+      <h2>How it Works in MF 2.0</h2>
+      <div class="flow-row">
+        <div class="flow-card">
+          <div class="fc-num">BUILD TIME (Remote)</div>
+          <div class="fc-title">Types Generated</div>
+          <div class="fc-desc">MF plugin runs <code>tsc</code> on exposed modules, bundles types into <code>@mf-types.zip</code></div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-card">
+          <div class="fc-num">MANIFEST</div>
+          <div class="fc-title">Types Referenced</div>
+          <div class="fc-desc"><code>mf-manifest.json</code> has <code>metaData.types.name</code> pointing to the zip file</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-card">
+          <div class="fc-num">HOST DEV SERVER</div>
+          <div class="fc-title">Types Downloaded</div>
+          <div class="fc-desc">MF plugin fetches the zip, extracts to <code>@mf-types/</code> in host's root</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-card">
+          <div class="fc-num">IDE</div>
+          <div class="fc-title">TypeScript ❤️</div>
+          <div class="fc-desc">Your editor now has full types for <code>import('product/Button')</code></div>
+        </div>
+      </div>
+
+      <h2>Configuration</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">webpack.config.js (Remote — generates types)</span></div>
+        <pre><span class="kw">new</span> <span class="fn">ModuleFederationPlugin</span>({
+  name: <span class="str">'product'</span>,
+  exposes: { <span class="str">'./Button'</span>: <span class="str">'./src/Button.tsx'</span> },
+  shared: { react: { singleton: <span class="kw">true</span> } },
+  <span class="cmt">// dts: true is the default in @module-federation/enhanced</span>
+  <span class="cmt">// Explicit config:</span>
+  dts: {
+    generateTypes: <span class="kw">true</span>,        <span class="cmt">// generate @mf-types.zip</span>
+    compileInChildProcess: <span class="kw">true</span>, <span class="cmt">// don't block the main build</span>
+    tsConfigPath: <span class="str">'./tsconfig.json'</span>,
+  },
+})</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">webpack.config.js (Host — consumes types)</span></div>
+        <pre><span class="kw">new</span> <span class="fn">ModuleFederationPlugin</span>({
+  name: <span class="str">'shell'</span>,
+  remotes: { product: <span class="str">'product@http://localhost:3001/mf-manifest.json'</span> },
+  dts: {
+    consumeTypes: <span class="kw">true</span>,         <span class="cmt">// download & extract types on dev server start</span>
+  },
+})</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JSON</span><span class="code-file">tsconfig.json (Host — tell TS where the types are)</span></div>
+        <pre>{
+  <span class="prop">"compilerOptions"</span>: {
+    <span class="prop">"paths"</span>: {
+      <span class="str">"product/*"</span>: [<span class="str">"./@mf-types/product/*"</span>]
+    }
+  }
+}</pre>
+      </div>
+
+      <h2>Result: Full IntelliSense for Remote Modules</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TSX</span><span class="code-file">shell/src/App.tsx</span></div>
+        <pre><span class="cmt">// ✅ TypeScript knows Button's props — autocomplete works!</span>
+<span class="kw">const</span> <span class="prop">Button</span> = <span class="fn">lazy</span>(() => <span class="kw">import</span>(<span class="str">'product/Button'</span>));
+
+<span class="cmt">// Hover over Button → shows: (prop) label: string, onClick?: () => void, variant?: 'primary' | 'secondary'</span>
+&lt;<span class="tag">Button</span> <span class="prop">label</span>=<span class="str">"Add to Cart"</span> /&gt; <span class="cmt">// ← full type checking!</span></pre>
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('runtime-hooks', document.querySelector('[data-section=runtime-hooks]'))">← Runtime Hooks</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('build-plugins', document.querySelector('[data-section=build-plugins]'))">Next: Build Plugins →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         13. BUILD PLUGINS
+    ══════════════════════════════════════════ -->
+    <section class="section" id="build-plugins">
+      <div class="chapter-tag">Chapter 13 — Advanced</div>
+      <h1>Build Plugins</h1>
+      <p class="lead">MF 2.0 works across every major bundler. Here's how to configure each one.</p>
+
+      <h2>Supported Build Tools</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="icon">📦</div>
+          <div class="fc-t">Webpack 5 <span class="badge v2">v2</span></div>
+          <div class="fc-d"><code>@module-federation/enhanced/webpack</code> — the original, most battle-tested</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">⚡</div>
+          <div class="fc-t">Rspack <span class="badge v2">v2</span></div>
+          <div class="fc-d"><code>@module-federation/enhanced/rspack</code> — Rust-based, 5-10x faster builds, same API</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🏗️</div>
+          <div class="fc-t">Rsbuild <span class="badge new">new</span></div>
+          <div class="fc-d"><code>@module-federation/rsbuild-plugin</code> — Rspack-based, batteries included</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">⚡</div>
+          <div class="fc-t">Vite <span class="badge new">new</span></div>
+          <div class="fc-d"><code>@module-federation/vite</code> — Vite plugin, community supported</div>
+        </div>
+      </div>
+
+      <h2>Webpack</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">webpack.config.js</span></div>
+        <pre><span class="kw">const</span> { <span class="prop">ModuleFederationPlugin</span> } = <span class="fn">require</span>(<span class="str">'@module-federation/enhanced/webpack'</span>);
+
+module.exports = {
+  output: {
+    publicPath: <span class="str">'auto'</span>, <span class="cmt">// ← critical for MF! Lets chunks be loaded from correct host</span>
+  },
+  plugins: [
+    <span class="kw">new</span> <span class="fn">ModuleFederationPlugin</span>({
+      name: <span class="str">'product'</span>,
+      filename: <span class="str">'remoteEntry.js'</span>,
+      exposes: { <span class="str">'./Button'</span>: <span class="str">'./src/Button.tsx'</span> },
+      shared: { react: { singleton: <span class="kw">true</span> } },
+    }),
+  ],
+};</pre>
+      </div>
+
+      <h2>Rspack (same API, faster builds)</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">rspack.config.js</span></div>
+        <pre><span class="kw">const</span> { <span class="prop">ModuleFederationPlugin</span> } = <span class="fn">require</span>(<span class="str">'@module-federation/enhanced/rspack'</span>);
+
+module.exports = {
+  output: { publicPath: <span class="str">'auto'</span> },
+  plugins: [
+    <span class="kw">new</span> <span class="fn">ModuleFederationPlugin</span>({
+      name: <span class="str">'product'</span>,
+      exposes: { <span class="str">'./Button'</span>: <span class="str">'./src/Button.tsx'</span> },
+      shared: { react: { singleton: <span class="kw">true</span> } },
+    }),
+  ],
+};</pre>
+      </div>
+
+      <h2>Rsbuild (createModuleFederationConfig)</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span><span class="code-file">rsbuild.config.ts</span></div>
+        <pre><span class="kw">import</span> { <span class="prop">defineConfig</span> } <span class="kw">from</span> <span class="str">'@rsbuild/core'</span>;
+<span class="kw">import</span> { <span class="prop">pluginModuleFederation</span> } <span class="kw">from</span> <span class="str">'@module-federation/rsbuild-plugin'</span>;
+
+<span class="kw">export default</span> <span class="fn">defineConfig</span>({
+  plugins: [
+    <span class="fn">pluginModuleFederation</span>({
+      name: <span class="str">'shell'</span>,
+      remotes: {
+        product: <span class="str">'product@http://localhost:3001/mf-manifest.json'</span>,
+      },
+      shared: { react: { singleton: <span class="kw">true</span> }, <span class="str">'react-dom'</span>: { singleton: <span class="kw">true</span> } },
+    }),
+  ],
+});</pre>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚡ publicPath: 'auto' is Critical</div>
+        Always set <code>output.publicPath: 'auto'</code> in remote apps. Without it, the remote's chunks will be fetched from the host's URL, causing 404 errors.
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('types', document.querySelector('[data-section=types]'))">← Dynamic Type Hints</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('performance', document.querySelector('[data-section=performance]'))">Next: Performance →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         14. PERFORMANCE
+    ══════════════════════════════════════════ -->
+    <section class="section" id="performance">
+      <div class="chapter-tag">Chapter 14 — Advanced</div>
+      <h1>Performance</h1>
+      <p class="lead">MF introduces new performance challenges. Here's how to master them.</p>
+
+      <h2>The Waterfall Problem</h2>
+      <p>Without preloading, MF has a sequential network request chain:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TIMELINE</span></div>
+        <pre>0ms   → GET /mf-manifest.json (shell's own)
+100ms → GET http://remote1:3001/mf-manifest.json
+200ms → GET http://remote1:3001/remoteEntry.js
+300ms → GET http://remote1:3001/src_Button_tsx.js
+400ms → 💥 React finally renders the remote component
+
+<span class="cmt">With preloadRemote() these happen in parallel:</span>
+0ms   → GET manifest + GET remoteEntry + GET chunks  (all at once)
+100ms → 💥 React renders immediately</pre>
+      </div>
+
+      <h2>Shared Tree Shaking</h2>
+      <p>MF 2.0 supports tree-shaking across shared modules. If the remote only uses 20% of a shared utility library, only those exports get bundled:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">webpack.config.js</span></div>
+        <pre>shared: {
+  <span class="str">'@myorg/utils'</span>: {
+    singleton: <span class="kw">true</span>,
+    <span class="cmt">// requiredVersion + import path = tree shaking eligible</span>
+    import: <span class="str">'@myorg/utils'</span>,
+    requiredVersion: <span class="str">'^1.0.0'</span>,
+  }
+}</pre>
+      </div>
+
+      <h2>Chunk Optimization Checklist</h2>
+      <table>
+        <thead><tr><th>What to Check</th><th>Why it Matters</th><th>How to Fix</th></tr></thead>
+        <tbody>
+          <tr><td>React loaded twice</td><td>2x bundle size + hook errors</td><td><code>singleton: true</code> on all apps</td></tr>
+          <tr><td>Large shared libs (lodash, moment)</td><td>Bloated initial bundle</td><td>Use tree-shakeable alternatives or scope sharing</td></tr>
+          <tr><td>No preloading on critical paths</td><td>Waterfall delay on navigation</td><td><code>preloadRemote()</code> on route hover/prefetch</td></tr>
+          <tr><td>No async boundary</td><td>"Shared module not available" error</td><td>Add <code>import('./bootstrap')</code> in index.js</td></tr>
+          <tr><td>publicPath hardcoded</td><td>Breaks in different environments</td><td>Use <code>publicPath: 'auto'</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('build-plugins', document.querySelector('[data-section=build-plugins]'))">← Build Plugins</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('debug', document.querySelector('[data-section=debug]'))">Next: Debug & Devtools →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         15. DEBUG
+    ══════════════════════════════════════════ -->
+    <section class="section" id="debug">
+      <div class="chapter-tag">Chapter 15 — Advanced</div>
+      <h1>Debug & Devtools</h1>
+      <p class="lead">MF 2.0 ships with a Chrome DevTool extension and built-in debug mode. No more guessing about shared scope.</p>
+
+      <h2>Chrome DevTool</h2>
+      <p>Install the "Module Federation Devtools" extension from Chrome Web Store. Once installed, a new "Module Federation" tab appears in DevTools showing:</p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="icon">🔍</div>
+          <div class="fc-t">Dependency Graph</div>
+          <div class="fc-d">Visual tree of all loaded remotes and their relationships</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">📦</div>
+          <div class="fc-t">Shared Scope Inspector</div>
+          <div class="fc-d">See every shared dep, its version, and whether it was reused or duplicated</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🔄</div>
+          <div class="fc-t">Hot Proxy</div>
+          <div class="fc-d">Redirect online remote to your local dev server for hot updates</div>
+        </div>
+        <div class="feature-card">
+          <div class="icon">⚡</div>
+          <div class="fc-t">Expose Explorer</div>
+          <div class="fc-d">See all exposed modules from each remote and their chunk IDs</div>
+        </div>
+      </div>
+
+      <h2>Enable Debug Mode</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">Option 1: webpack.config.js</span></div>
+        <pre><span class="kw">new</span> <span class="fn">ModuleFederationPlugin</span>({
+  name: <span class="str">'shell'</span>,
+  <span class="cmt">// ...</span>
+  dev: <span class="kw">true</span>, <span class="cmt">// enables debug logs in console</span>
+})</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">Option 2: Browser Console</span></div>
+        <pre><span class="cmt">// In browser devtools console:</span>
+__FEDERATION__.<span class="prop">__DEBUG__</span> = <span class="kw">true</span>; <span class="cmt">// enable verbose logs</span>
+__FEDERATION__.<span class="prop">__INSTANCES__</span>;    <span class="cmt">// inspect all MF instances</span>
+__FEDERATION__.<span class="prop">__MANIFEST__</span>;     <span class="cmt">// inspect loaded manifests</span></pre>
+      </div>
+
+      <h2>Global Variables for Debugging</h2>
+      <table>
+        <thead><tr><th>Variable</th><th>What you see</th></tr></thead>
+        <tbody>
+          <tr><td><code>__FEDERATION__.__INSTANCES__</code></td><td>Array of all active MF instances with their config</td></tr>
+          <tr><td><code>__FEDERATION__.__MANIFEST__</code></td><td>Parsed manifest files for all loaded remotes</td></tr>
+          <tr><td><code>__webpack_require__.S</code></td><td>The raw shared scope object with all registered versions</td></tr>
+          <tr><td><code>__webpack_require__.m</code></td><td>Module registry — check if a module is already loaded</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('performance', document.querySelector('[data-section=performance]'))">← Performance</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('patterns', document.querySelector('[data-section=patterns]'))">Next: Patterns & Recipes →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         16. PATTERNS
+    ══════════════════════════════════════════ -->
+    <section class="section" id="patterns">
+      <div class="chapter-tag">Chapter 16 — Advanced</div>
+      <h1>Patterns & Recipes</h1>
+      <p class="lead">Real-world patterns used in production MF systems — including patterns relevant to your work at Lowe's Helix.</p>
+
+      <h2>Pattern 1: Shell + Feature Micro-frontends</h2>
+      <p>The classic. One shell handles routing, all features are independent remotes.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TSX</span><span class="code-file">shell/src/Router.tsx</span></div>
+        <pre><span class="kw">import</span> { <span class="prop">lazy</span>, <span class="prop">Suspense</span> } <span class="kw">from</span> <span class="str">'react'</span>;
+<span class="kw">import</span> { <span class="prop">Routes</span>, <span class="prop">Route</span> } <span class="kw">from</span> <span class="str">'react-router-dom'</span>;
+
+<span class="kw">const</span> <span class="prop">Products</span>  = <span class="fn">lazy</span>(() => <span class="kw">import</span>(<span class="str">'product/routes'</span>));
+<span class="kw">const</span> <span class="prop">Checkout</span>  = <span class="fn">lazy</span>(() => <span class="kw">import</span>(<span class="str">'checkout/routes'</span>));
+<span class="kw">const</span> <span class="prop">Dashboard</span> = <span class="fn">lazy</span>(() => <span class="kw">import</span>(<span class="str">'dashboard/routes'</span>));
+
+<span class="kw">export default function</span> <span class="fn">AppRouter</span>() {
+  <span class="kw">return</span> (
+    <span class="tag">&lt;Suspense</span> <span class="prop">fallback</span>=<span class="str">&lt;GlobalSpinner /&gt;</span><span class="tag">&gt;</span>
+      <span class="tag">&lt;Routes&gt;</span>
+        <span class="tag">&lt;Route</span> <span class="prop">path</span>=<span class="str">"/products/*"</span> <span class="prop">element</span>=<span class="str">{&lt;Products /&gt;}</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;Route</span> <span class="prop">path</span>=<span class="str">"/checkout/*"</span> <span class="prop">element</span>=<span class="str">{&lt;Checkout /&gt;}</span> <span class="tag">/&gt;</span>
+        <span class="tag">&lt;Route</span> <span class="prop">path</span>=<span class="str">"/dashboard/*"</span> <span class="prop">element</span>=<span class="str">{&lt;Dashboard /&gt;}</span> <span class="tag">/&gt;</span>
+      <span class="tag">&lt;/Routes&gt;</span>
+    <span class="tag">&lt;/Suspense&gt;</span>
+  );
+}</pre>
+      </div>
+
+      <h2>Pattern 2: Design System as Remote</h2>
+      <p>Expose your component library as a remote. All teams consume live — no npm publish, instant updates.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JS</span><span class="code-file">design-system/webpack.config.js</span></div>
+        <pre><span class="kw">new</span> <span class="fn">ModuleFederationPlugin</span>({
+  name: <span class="str">'designSystem'</span>,
+  exposes: {
+    <span class="str">'./Button'</span>:   <span class="str">'./src/Button.tsx'</span>,
+    <span class="str">'./Modal'</span>:    <span class="str">'./src/Modal.tsx'</span>,
+    <span class="str">'./Table'</span>:    <span class="str">'./src/Table.tsx'</span>,
+    <span class="str">'./tokens'</span>:   <span class="str">'./src/tokens/index.ts'</span>,
+    <span class="str">'.'</span>:          <span class="str">'./src/index.ts'</span>, <span class="cmt">// barrel export</span>
+  },
+  shared: {
+    react: { singleton: <span class="kw">true</span>, requiredVersion: <span class="str">'^18.0.0'</span> },
+    <span class="str">'react-dom'</span>: { singleton: <span class="kw">true</span> },
+  },
+})</pre>
+      </div>
+
+      <h2>Pattern 3: Cross-MFE Communication</h2>
+      <p>Micro-frontends should NOT directly call each other. Use a shared event bus or shared store exposed from a common remote.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span><span class="code-file">shared-state/src/eventBus.ts</span></div>
+        <pre><span class="cmt">// Exposed from a 'sharedState' remote</span>
+<span class="kw">type</span> <span class="prop">Handler</span> = (data: <span class="kw">unknown</span>) => <span class="kw">void</span>;
+<span class="kw">const</span> listeners = <span class="kw">new</span> <span class="prop">Map</span>&lt;<span class="prop">string</span>, <span class="prop">Set</span>&lt;<span class="prop">Handler</span>&gt;&gt;();
+
+<span class="kw">export const</span> <span class="fn">emit</span> = (event: <span class="prop">string</span>, data: <span class="kw">unknown</span>) => {
+  listeners.<span class="fn">get</span>(event)?.forEach(h => <span class="fn">h</span>(data));
+};
+
+<span class="kw">export const</span> <span class="fn">on</span> = (event: <span class="prop">string</span>, handler: <span class="prop">Handler</span>) => {
+  <span class="kw">if</span> (!listeners.<span class="fn">has</span>(event)) listeners.<span class="fn">set</span>(event, <span class="kw">new</span> <span class="prop">Set</span>());
+  listeners.<span class="fn">get</span>(event)!.<span class="fn">add</span>(handler);
+  <span class="kw">return</span> () => listeners.<span class="fn">get</span>(event)!.<span class="fn">delete</span>(handler); <span class="cmt">// unsubscribe</span>
+};</pre>
+      </div>
+
+      <h2>Pattern 4: Canary Releases</h2>
+      <p>Deploy two versions of a remote, route a % of users to the new version — without touching the host.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TS</span><span class="code-file">shell/src/bootstrap.ts</span></div>
+        <pre><span class="kw">import</span> { <span class="prop">init</span>, <span class="prop">registerRemotes</span> } <span class="kw">from</span> <span class="str">'@module-federation/enhanced/runtime'</span>;
+
+<span class="kw">const</span> isCanaryUser = Math.<span class="fn">random</span>() &lt; <span class="num">0.1</span>; <span class="cmt">// 10% canary</span>
+
+<span class="fn">init</span>({ name: <span class="str">'shell'</span>, remotes: [] });
+
+<span class="fn">registerRemotes</span>([{
+  name: <span class="str">'product'</span>,
+  entry: isCanaryUser
+    ? <span class="str">'http://cdn.myco.com/product/v2/mf-manifest.json'</span>
+    : <span class="str">'http://cdn.myco.com/product/v1/mf-manifest.json'</span>,
+}]);</pre>
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('debug', document.querySelector('[data-section=debug]'))">← Debug</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('troubleshooting', document.querySelector('[data-section=troubleshooting]'))">Next: Troubleshooting →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         17. TROUBLESHOOTING
+    ══════════════════════════════════════════ -->
+    <section class="section" id="troubleshooting">
+      <div class="chapter-tag">Chapter 17 — Final</div>
+      <h1>Troubleshooting</h1>
+      <p class="lead">Every error you'll encounter in production, and exactly how to fix it.</p>
+
+      <h2>Runtime Errors</h2>
+      <table>
+        <thead><tr><th>Error</th><th>Root Cause</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>Shared module is not available for eager consumption</code></td>
+            <td>Synchronous import before async negotiation</td>
+            <td>Add <code>import('./bootstrap')</code> in index.js</td>
+          </tr>
+          <tr>
+            <td><code>Invalid hook call</code></td>
+            <td>Two copies of React loaded</td>
+            <td><code>react: &#123; singleton: true &#125;</code> on all apps</td>
+          </tr>
+          <tr>
+            <td><code>Cannot find module 'remoteName/expose'</code></td>
+            <td>Remote not declared in <code>remotes</code></td>
+            <td>Add to <code>remotes</code> config and rebuild</td>
+          </tr>
+          <tr>
+            <td><code>404 on remoteEntry.js</code></td>
+            <td>Wrong URL, remote not running, wrong publicPath</td>
+            <td>Verify URL, check remote dev server, set <code>publicPath: 'auto'</code></td>
+          </tr>
+          <tr>
+            <td>Stale module after hot reload</td>
+            <td>Module cache not invalidated</td>
+            <td>Add <code>output.uniqueName</code> in remote config</td>
+          </tr>
+          <tr>
+            <td>CORS error on manifest fetch</td>
+            <td>Remote server doesn't allow cross-origin</td>
+            <td>Add CORS headers to remote dev server / CDN</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Build Errors</h2>
+      <table>
+        <thead><tr><th>Error</th><th>Root Cause</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>Circular dependency</code></td>
+            <td>App A remotes App B, B remotes A</td>
+            <td>MF supports circular deps — ensure init order is correct</td>
+          </tr>
+          <tr>
+            <td>Type errors on remote imports</td>
+            <td>Types not downloaded or tsconfig paths missing</td>
+            <td>Enable <code>dts.consumeTypes: true</code>, add tsconfig paths</td>
+          </tr>
+          <tr>
+            <td>Build succeeds but chunks 404</td>
+            <td><code>publicPath</code> is wrong</td>
+            <td>Set <code>output.publicPath: 'auto'</code> in remote</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Final Quiz</h2>
+      <div class="quiz">
+        <div class="quiz-q">🧠 You see "Invalid hook call" — React hooks can only be called inside React components. You're inside a component. What's the MF root cause?</div>
+        <button class="quiz-option" onclick="answer(this, false)">The remote component is using class components instead of hooks</button>
+        <button class="quiz-option" onclick="answer(this, true)">Two separate copies of React are loaded — host has one, remote has another</button>
+        <button class="quiz-option" onclick="answer(this, false)">The Suspense boundary is missing</button>
+        <div class="quiz-result" id="quiz-result-2"></div>
+      </div>
+
+      <div class="callout success">
+        <div class="callout-title">🎉 You've completed the Module Federation Masterclass!</div>
+        You now understand every concept from the official guide: Host/Remote, exposes/remotes/shared, Manifest, Federation Runtime, Runtime API, Runtime Hooks, Plugin System, Dynamic Types, Build Plugins, Performance, Debugging, and Production Patterns. You're ready to architect and build production-grade MF systems.
+      </div>
+
+      <div class="section-nav">
+        <button class="nav-btn" onclick="goto('patterns', document.querySelector('[data-section=patterns]'))">← Patterns</button>
+        <span class="nav-btn-spacer"></span>
+        <button class="nav-btn primary" onclick="goto('intro', document.querySelector('[data-section=intro]'))">↩ Back to Start</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  let quizAnswered = {};
+
+  function goto(sectionId, navEl) {
+    // Hide all sections
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(sectionId).classList.add('active');
+
+    // Update nav
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if (navEl) navEl.classList.add('active');
+
+    // Scroll to top
+    document.querySelector('.main').scrollTop = 0;
+
+    // Update progress
+    const sections = ['intro','mental-model','v2','host-remote','exposes','remotes-cfg','shared','manifest','runtime','runtime-api','runtime-hooks','types','build-plugins','performance','debug','patterns','troubleshooting'];
+    const idx = sections.indexOf(sectionId);
+    const pct = Math.round(((idx + 1) / sections.length) * 100);
+    document.getElementById('progressBar').style.width = pct + '%';
+  }
+
+  function answer(btn, isCorrect) {
+    const quiz = btn.closest('.quiz');
+    const result = quiz.querySelector('.quiz-result');
+    const id = result.id;
+
+    if (quizAnswered[id]) return;
+    quizAnswered[id] = true;
+
+    quiz.querySelectorAll('.quiz-option').forEach(b => {
+      b.style.pointerEvents = 'none';
+    });
+
+    if (isCorrect) {
+      btn.classList.add('correct');
+      result.textContent = '✅ Correct! ' + getExplanation(id);
+      result.classList.add('show', 'good');
+    } else {
+      btn.classList.add('wrong');
+      result.textContent = '❌ Not quite. ' + getExplanation(id);
+      result.classList.add('show', 'bad');
+      // Highlight correct
+      quiz.querySelectorAll('.quiz-option').forEach(b2 => {
+        if (b2 !== btn) {
+          const isRight = b2.onclick.toString().includes('true');
+          if (isRight) b2.classList.add('correct');
+        }
+      });
+    }
+  }
+
+  function getExplanation(id) {
+    const explanations = {
+      'quiz-result-0': "The async import creates a 'chunk loading boundary' — Webpack must negotiate shared deps across all containers before any module runs. Without it, the bootstrap is synchronous and React would try to load before MF can check if a shared version already exists.",
+      'quiz-result-1': "With singleton:true, MF enforces one instance. If multiple versions are detected, the highest already-loaded version wins and a console warning is emitted. The remote's React 17 is silently upgraded to React 18 from the host's shared scope.",
+      'quiz-result-2': "When React is loaded twice, each copy has its own internal state. Hooks are validated against the React instance that originally mounted the component. If the host's React renders the shell and the remote's React renders the component, they don't match — causing the cryptic 'Invalid hook call' error.",
+    };
+    return explanations[id] || '';
+  }
+</script>
+</body>
+</html>
